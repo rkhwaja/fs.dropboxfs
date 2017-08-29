@@ -3,30 +3,38 @@ from datetime import datetime
 from io import BytesIO
 
 from dropbox import Dropbox
+from dropbox.files import DownloadError, FileMetadata, FolderMetadata, WriteMode
 from dropbox.exceptions import ApiError
 from fs.base import FS
+from fs.errors import ResourceNotFound
+from fs.info import Info
 from fs.mode import Mode
+from fs.subfs import SubFS
+from fs.time import datetime_to_epoch, epoch_to_datetime
 
 class DropboxFile(BytesIO):
-	def __init__(self, dropbox, path):
+	def __init__(self, dropbox, path, mode):
 		self.dropbox = dropbox
 		self.path = path
+		self.mode = mode
 		try:
 			metadata, response = self.dropbox.files_download(self.path)
 			with closing(response):
-				initialData = response.read()
+				initialData = response.content
 			self.rev = metadata.rev
-		except DownloadError:
+		except ApiError:
 			initialData = None
 			self.rev = None
-		super().__init__(self, initialData)
+		super().__init__(initialData)
 
 	def close(self):
+		if not self.mode.writing:
+			return
 		if self.rev is None:
 			writeMode = WriteMode("add")
 		else:
 			writeMode = WriteMode("update", self.rev)
-		self.metadata = self.dropbox.files_upload(self.data, self.path, mode=writeMode, autorename=False, client_modified=datetime.now(), mute=False)
+		self.metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False)
 
 class DropboxFS(FS):
 	def __init__(self, accessToken):
@@ -94,6 +102,7 @@ class DropboxFS(FS):
 		try:
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
+			print("No exist")
 			raise ResourceNotFound(path=path, exc=e)
 		return self._itemInfo(metadata)
 
@@ -127,12 +136,13 @@ class DropboxFS(FS):
 			raise FileExists(path=path)
 		if self.exists(path) and not self.isfile(path):
 			raise FileExpected(path=path)
-		return DropboxFile(self.dropbox, path)
+		return DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
 		try:
 			self.dropbox.files_delete(path)
 		except ApiError as e:
+			print("Delete error")
 			assert e.reason is DeleteError
 			raise FileExpected(path=path, exc=e)
 
@@ -145,7 +155,39 @@ class DropboxFS(FS):
 
 def test():
 	from os import environ
+	from fs.path import join
+	
 	token = environ["DROPBOX_ACCESS_TOKEN"]
 	fs = DropboxFS(token)
-	with fs.open("/temp/test/test.txt", "w") as f:
+	testDir = "/temp/test"
+
+	textPath = join(testDir, "test.txt")
+	assert not fs.exists(textPath)
+	with fs.open(textPath, "w") as f:
 		f.write("Testing")
+	assert fs.exists(textPath)
+	with fs.open(textPath, "r") as f:
+		assert f.read() == "Testing"
+	fs.remove(textPath)
+	assert not fs.exists(textPath)
+
+	binaryPath = join(testDir, "binary.txt")
+	assert not fs.exists(binaryPath)
+	with fs.open(binaryPath, "wb") as f:
+		f.write(b"binary")
+	assert fs.exists(binaryPath)
+	with fs.open(binaryPath, "rb") as f:
+		assert f.read() == b"binary"
+	fs.remove(binaryPath)
+	assert not fs.exists(binaryPath)
+
+	fs.makedir("/temp/test/somedir")
+	assert fs.exists("/temp/test/somedir")
+	fs.removedir("/temp/test/somedir")
+	assert not fs.exists("/temp/test/somedir")
+
+	with fs.open(binaryPath, "wb") as f:
+		f.write(b"binary")
+	assert fs.listdir(testDir) == ["binary.txt"]
+	fs.remove(binaryPath)
+	assert not fs.exists(binaryPath)
