@@ -6,7 +6,7 @@ from dropbox import Dropbox
 from dropbox.files import DownloadError, FileMetadata, FolderMetadata, WriteMode
 from dropbox.exceptions import ApiError
 from fs.base import FS
-from fs.errors import ResourceNotFound
+from fs.errors import FileExpected, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.subfs import SubFS
@@ -17,15 +17,22 @@ class DropboxFile(BytesIO):
 		self.dropbox = dropbox
 		self.path = path
 		self.mode = mode
+		initialData = None
+		self.rev = None
 		try:
 			metadata, response = self.dropbox.files_download(self.path)
-			with closing(response):
-				initialData = response.content
 			self.rev = metadata.rev
+			with closing(response):
+				# if (self.mode.reading or self.mode.appending or self.mode.updating) and not self.mode.truncate:
+				if self.mode.reading and not self.mode.truncate:
+					initialData = response.content
 		except ApiError:
-			initialData = None
-			self.rev = None
+			# if the file doesn't exist, we don't need to read it's initial state
+			pass
 		super().__init__(initialData)
+		if self.mode.appending and initialData is not None:
+			# seek to the end
+			self.seek(len(initialData))
 
 	def close(self):
 		if not self.mode.writing:
@@ -34,7 +41,11 @@ class DropboxFile(BytesIO):
 			writeMode = WriteMode("add")
 		else:
 			writeMode = WriteMode("update", self.rev)
-		self.metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False)
+		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False)
+		# Make sure that we can't call this again
+		self.path = None
+		self.mode = None
+		self.dropbox = None
 
 class DropboxFS(FS):
 	def __init__(self, accessToken):
@@ -53,7 +64,7 @@ class DropboxFS(FS):
 	def __repr__(self):
 		return f"<DropboxDriveFS>"
 
-	def _itemInfo(self, metadata): # pylint: disable=no-self-use
+	def _infoFromMetadata(self, metadata): # pylint: disable=no-self-use
 		rawInfo = {
 			"basic": {
 				"name": metadata.name,
@@ -102,23 +113,15 @@ class DropboxFS(FS):
 		try:
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
-			print("No exist")
 			raise ResourceNotFound(path=path, exc=e)
-		return self._itemInfo(metadata)
+		return self._infoFromMetadata(metadata)
 
 	def setinfo(self, path, info): # pylint: disable=too-many-branches
 		# dropbox doesn't support changing any of the metadata values
 		pass
 
 	def listdir(self, path):
-		# get all the avaliable metadata since it's cheap
-		# TODO - this call has a recursive flag so we can either use that and cache OR override walk
-		result = self.dropbox.files_list_folder(path, include_media_info=True)
-		allEntries = result.entries
-		while result.has_more:
-			result = self.dropbox.files_list_folder_continue(result.cursor)
-			allEntries += result.entries
-		return [x.name for x in allEntries]
+		return [x.name for x in self.scandir(path)]
 
 	def makedir(self, path, permissions=None, recreate=False):
 		try:
@@ -133,17 +136,17 @@ class DropboxFS(FS):
 	def openbin(self, path, mode="r", buffering=-1, **options):
 		mode = Mode(mode)
 		if mode.exclusive and self.exists(path):
-			raise FileExists(path=path)
-		if self.exists(path) and not self.isfile(path):
-			raise FileExpected(path=path)
+			raise FileExists(path)
+		elif mode.reading and not mode.create and not self.exists(path):
+			raise ResourceNotFound(path)
+		elif self.isdir(path):
+			raise FileExpected(path)
 		return DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
 		try:
 			self.dropbox.files_delete(path)
 		except ApiError as e:
-			print("Delete error")
-			assert e.reason is DeleteError
 			raise FileExpected(path=path, exc=e)
 
 	def removedir(self, path):
@@ -153,16 +156,32 @@ class DropboxFS(FS):
 			assert e.reason is DeleteError
 			raise DirectoryExpected(path=path, exc=e)
 
-def test():
+	# non-essential method - for speeding up walk
+	def scandir(self, path, namespaces=None, page=None):
+		# get all the avaliable metadata since it's cheap
+		# TODO - this call has a recursive flag so we can either use that and cache OR override walk
+		result = self.dropbox.files_list_folder(path, include_media_info=True)
+		allEntries = result.entries
+		while result.has_more:
+			result = self.dropbox.files_list_folder_continue(result.cursor)
+			allEntries += result.entries
+		return [self._infoFromMetadata(x) for x in allEntries]
+
+def setup_test():
 	from os import environ
-	from fs.path import join
-	
 	token = environ["DROPBOX_ACCESS_TOKEN"]
 	fs = DropboxFS(token)
 	testDir = "/temp/test"
+	return fs, testDir
+
+def test():
+	from contextlib import suppress
+	from fs.path import join
+	
+	fs, testDir = setup_test()
 
 	textPath = join(testDir, "test.txt")
-	assert not fs.exists(textPath)
+	assert not fs.exists(textPath), "Bad starting state"
 	with fs.open(textPath, "w") as f:
 		f.write("Testing")
 	assert fs.exists(textPath)
@@ -172,7 +191,7 @@ def test():
 	assert not fs.exists(textPath)
 
 	binaryPath = join(testDir, "binary.txt")
-	assert not fs.exists(binaryPath)
+	assert not fs.exists(binaryPath), "Bad starting state"
 	with fs.open(binaryPath, "wb") as f:
 		f.write(b"binary")
 	assert fs.exists(binaryPath)
@@ -181,13 +200,61 @@ def test():
 	fs.remove(binaryPath)
 	assert not fs.exists(binaryPath)
 
-	fs.makedir("/temp/test/somedir")
-	assert fs.exists("/temp/test/somedir")
-	fs.removedir("/temp/test/somedir")
-	assert not fs.exists("/temp/test/somedir")
+	dirPath = join(testDir, "somedir")
+	assert not fs.exists(dirPath), "Bad starting state"
+	fs.makedir(dirPath)
+	assert fs.exists(dirPath)
+	fs.removedir(dirPath)
+	assert not fs.exists(dirPath)
 
 	with fs.open(binaryPath, "wb") as f:
 		f.write(b"binary")
 	assert fs.listdir(testDir) == ["binary.txt"]
 	fs.remove(binaryPath)
 	assert not fs.exists(binaryPath)
+
+def assert_contents(fs, path, expectedContents):
+	with fs.open(path, "r") as f:
+		contents = f.read()
+		assert contents == expectedContents, f"'{contents}'"
+
+def test_versions():
+	from contextlib import suppress
+	from fs.path import join
+
+	fs, testDir = setup_test()
+	path = join(testDir, "versions.txt")
+
+	with suppress(ResourceNotFound, FileExpected):
+		fs.remove(path)
+
+	with fs.open(path, "wb") as f:
+		f.write(b"v1")
+
+	with fs.open(path, "wb") as f:
+		f.write(b"v2")
+
+	with suppress(ResourceNotFound, FileExpected):
+		fs.remove(path)
+
+def test_open_modes():
+	from contextlib import suppress
+	from io import SEEK_END
+	from fs.path import join
+
+	fs, testDir = setup_test()
+	path = join(testDir, "test.txt")
+	with suppress(ResourceNotFound, FileExpected):
+		fs.remove(path)
+	with fs.open(path, "w") as f:
+		f.write("AAA")
+	assert_contents(fs, path, "AAA")
+	with fs.open(path, "ra") as f:
+		f.write("BBB")
+	assert_contents(fs, path, "AAABBB")
+	with fs.open(path, "r+") as f:
+		f.seek(1)
+		f.write("X")
+	assert_contents(fs, path, "AXABBB")
+	fs.remove(path)
+	assert not fs.exists(path)
