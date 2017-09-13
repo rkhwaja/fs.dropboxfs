@@ -89,14 +89,27 @@ class DropboxFS(FS):
 			})
 			if metadata.media_info is not None and metadata.media_info.is_metadata() is True:
 				media_info_metadata = metadata.media_info.get_metadata()
-				rawInfo.update({"media_info":
-					{
-						"taken_date_time": datetime_to_epoch(media_info_metadata.time_taken),
-						"location_latitude": media_info_metadata.location.latitude,
-						"location_longitude": media_info_metadata.location.longitude,
-						"dimensions_height": media_info_metadata.dimensions.height,
-						"dimensions_width": media_info_metadata.dimensions.width
-					}})
+				if media_info_metadata.time_taken is not None:
+					rawInfo.update({
+						"media_info": {
+							"taken_date_time": datetime_to_epoch(media_info_metadata.time_taken)
+						}
+					})
+				if media_info_metadata.location is not None:
+					rawInfo.update({
+						"media_info": {
+							"location_latitude": media_info_metadata.location.latitude,
+							"location_longitude": media_info_metadata.location.longitude
+						}
+					})
+				# Dropbox doesn't parse some jpgs properly
+				if media_info_metadata.dimensions is not None:
+					rawInfo.update({
+						"media_info": {
+							"dimensions_height": media_info_metadata.dimensions.height,
+							"dimensions_width": media_info_metadata.dimensions.width
+						}
+					})
 		elif isinstance(metadata, FolderMetadata):
 			rawInfo.update({
 			"details": {
@@ -107,9 +120,14 @@ class DropboxFS(FS):
 				"size": None, # not supported for folders
 				"type": 1
 				}})
+		else:
+			assert False, f"{metadata.name}, {metadata}, {type(metadata)}"
 		return Info(rawInfo)
 
 	def getinfo(self, path, namespaces=None):
+		print(f"path: {path}")
+		if path == "/":
+			return Info({"basic": {"name": "", "is_dir": True}})
 		try:
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
@@ -158,6 +176,9 @@ class DropboxFS(FS):
 
 	# non-essential method - for speeding up walk
 	def scandir(self, path, namespaces=None, page=None):
+		# 
+		if path == "/":
+			path = ""
 		# get all the avaliable metadata since it's cheap
 		# TODO - this call has a recursive flag so we can either use that and cache OR override walk
 		result = self.dropbox.files_list_folder(path, include_media_info=True)
