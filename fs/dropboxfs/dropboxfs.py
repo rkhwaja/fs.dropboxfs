@@ -1,4 +1,4 @@
-from contextlib import closing
+from contextlib import closing, contextmanager
 from datetime import datetime
 from io import BytesIO
 
@@ -57,12 +57,12 @@ class DropboxFS(FS):
 			"max_path_length": None, # don't know what the limit is
 			"max_sys_path_length": None, # there's no syspath
 			"network": True,
-			"read_only": True, # at least until openbin is fully implemented
+			"read_only": False,
 			"supports_rename": False # since we don't have a syspath...
 		}
 
 	def __repr__(self):
-		return f"<DropboxDriveFS>"
+		return "<DropboxDriveFS>"
 
 	def _infoFromMetadata(self, metadata): # pylint: disable=no-self-use
 		rawInfo = {
@@ -153,11 +153,17 @@ class DropboxFS(FS):
 
 	def openbin(self, path, mode="r", buffering=-1, **options):
 		mode = Mode(mode)
-		if mode.exclusive and self.exists(path):
+		exists = True
+		isDir = False
+		try:
+			isDir = self.getinfo(path).is_dir
+		except ResourceNotFound:
+			exists = False
+		if mode.exclusive and exists:
 			raise FileExists(path)
-		elif mode.reading and not mode.create and not self.exists(path):
+		elif mode.reading and not mode.create and not exists:
 			raise ResourceNotFound(path)
-		elif self.isdir(path):
+		elif isDir:
 			raise FileExpected(path)
 		return DropboxFile(self.dropbox, path, mode)
 
@@ -188,51 +194,61 @@ class DropboxFS(FS):
 			allEntries += result.entries
 		return [self._infoFromMetadata(x) for x in allEntries]
 
+@contextmanager
 def setup_test():
 	from os import environ
+	from uuid import uuid4
 	token = environ["DROPBOX_ACCESS_TOKEN"]
 	fs = DropboxFS(token)
-	testDir = "/temp/test"
+	testDir = "/tests/dropboxfs-test-" + uuid4().hex
+	try:
+		assert fs.exists(testDir) is False
+		fs.makedir(testDir)
+		yield (fs, testDir)
+	finally:
+		fs.removedir(testDir)
+		fs.close()
 	return fs, testDir
 
 def test():
 	from contextlib import suppress
 	from fs.path import join
 	
-	fs, testDir = setup_test()
+	with setup_test() as testSetup:
+		fs, testDir = testSetup
 
-	textPath = join(testDir, "test.txt")
-	assert not fs.exists(textPath), "Bad starting state"
-	with fs.open(textPath, "w") as f:
-		f.write("Testing")
-	assert fs.exists(textPath)
-	with fs.open(textPath, "r") as f:
-		assert f.read() == "Testing"
-	fs.remove(textPath)
-	assert not fs.exists(textPath)
+		textPath = join(testDir, "test.txt")
+		assert not fs.exists(textPath), "Bad starting state"
+		with fs.open(textPath, "w") as f:
+			f.write("Testing")
+		assert fs.exists(textPath)
+		with fs.open(textPath, "r") as f:
+			assert f.read() == "Testing"
+		fs.remove(textPath)
+		assert not fs.exists(textPath)
 
-	binaryPath = join(testDir, "binary.txt")
-	assert not fs.exists(binaryPath), "Bad starting state"
-	with fs.open(binaryPath, "wb") as f:
-		f.write(b"binary")
-	assert fs.exists(binaryPath)
-	with fs.open(binaryPath, "rb") as f:
-		assert f.read() == b"binary"
-	fs.remove(binaryPath)
-	assert not fs.exists(binaryPath)
+		binaryPath = join(testDir, "binary.txt")
+		assert not fs.exists(binaryPath), "Bad starting state"
+		with fs.open(binaryPath, "wb") as f:
+			f.write(b"binary")
+		assert fs.exists(binaryPath)
+		with fs.open(binaryPath, "rb") as f:
+			assert f.read() == b"binary"
+		fs.remove(binaryPath)
+		assert not fs.exists(binaryPath)
 
-	dirPath = join(testDir, "somedir")
-	assert not fs.exists(dirPath), "Bad starting state"
-	fs.makedir(dirPath)
-	assert fs.exists(dirPath)
-	fs.removedir(dirPath)
-	assert not fs.exists(dirPath)
+		dirPath = join(testDir, "somedir")
+		assert not fs.exists(dirPath), "Bad starting state"
+		fs.makedir(dirPath)
+		assert fs.exists(dirPath)
+		fs.removedir(dirPath)
+		assert not fs.exists(dirPath)
 
-	with fs.open(binaryPath, "wb") as f:
-		f.write(b"binary")
-	assert fs.listdir(testDir) == ["binary.txt"]
-	fs.remove(binaryPath)
-	assert not fs.exists(binaryPath)
+		with fs.open(binaryPath, "wb") as f:
+			f.write(b"binary")
+		assert fs.listdir(testDir) == ["binary.txt"]
+		fs.remove(binaryPath)
+		assert not fs.exists(binaryPath)
 
 def assert_contents(fs, path, expectedContents):
 	with fs.open(path, "r") as f:
@@ -243,39 +259,64 @@ def test_versions():
 	from contextlib import suppress
 	from fs.path import join
 
-	fs, testDir = setup_test()
-	path = join(testDir, "versions.txt")
+	with setup_test() as testSetup:
+		fs, testDir = testSetup
 
-	with suppress(ResourceNotFound, FileExpected):
-		fs.remove(path)
+		path = join(testDir, "versions.txt")
 
-	with fs.open(path, "wb") as f:
-		f.write(b"v1")
+		with suppress(ResourceNotFound, FileExpected):
+			fs.remove(path)
 
-	with fs.open(path, "wb") as f:
-		f.write(b"v2")
+		with fs.open(path, "wb") as f:
+			f.write(b"v1")
 
-	with suppress(ResourceNotFound, FileExpected):
-		fs.remove(path)
+		with fs.open(path, "wb") as f:
+			f.write(b"v2")
+
+		with suppress(ResourceNotFound, FileExpected):
+			fs.remove(path)
 
 def test_open_modes():
 	from contextlib import suppress
 	from io import SEEK_END
 	from fs.path import join
 
-	fs, testDir = setup_test()
-	path = join(testDir, "test.txt")
-	with suppress(ResourceNotFound, FileExpected):
+	with setup_test() as testSetup:
+		fs, testDir = testSetup
+
+		path = join(testDir, "test.txt")
+		with suppress(ResourceNotFound, FileExpected):
+			fs.remove(path)
+		with fs.open(path, "w") as f:
+			f.write("AAA")
+		assert_contents(fs, path, "AAA")
+		with fs.open(path, "ra") as f:
+			f.write("BBB")
+		assert_contents(fs, path, "AAABBB")
+		with fs.open(path, "r+") as f:
+			f.seek(1)
+			f.write("X")
+		assert_contents(fs, path, "AXABBB")
 		fs.remove(path)
-	with fs.open(path, "w") as f:
-		f.write("AAA")
-	assert_contents(fs, path, "AAA")
-	with fs.open(path, "ra") as f:
-		f.write("BBB")
-	assert_contents(fs, path, "AAABBB")
-	with fs.open(path, "r+") as f:
-		f.seek(1)
-		f.write("X")
-	assert_contents(fs, path, "AXABBB")
-	fs.remove(path)
-	assert not fs.exists(path)
+		assert not fs.exists(path)
+
+def test_speed():
+	from time import perf_counter
+	from fs.path import join
+
+	with setup_test() as testSetup:
+		fs, testDir = testSetup
+
+		startTime = perf_counter()
+		for directory in ["a", "b", "c", "d"]:
+			thisDirFS = fs.makedir(join(testDir, directory))
+			for filename in ["A", "B", "C", "D"]:
+				with thisDirFS.open(filename, "w") as f:
+					f.write(filename)
+		print(f"Time for makedir/openbin {perf_counter() - startTime}")
+
+		testDirFS = fs.opendir(testDir)
+		startTime = perf_counter()
+		for path, info_ in testDirFS.walk.info(namespaces=["basic", "details"]):
+			pass
+		print(f"Time for walk {perf_counter() - startTime}")
