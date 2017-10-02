@@ -125,10 +125,11 @@ class DropboxFS(FS):
 		return Info(rawInfo)
 
 	def getinfo(self, path, namespaces=None):
-		print(f"path: {path}")
 		if path == "/":
 			return Info({"basic": {"name": "", "is_dir": True}})
 		try:
+			if not path.startswith("/"):
+				path = "/" + path
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
 			raise ResourceNotFound(path=path, exc=e)
@@ -320,3 +321,15 @@ def test_speed():
 		for path, info_ in testDirFS.walk.info(namespaces=["basic", "details"]):
 			pass
 		print(f"Time for walk {perf_counter() - startTime}")
+
+def test_opener():
+	from os import environ
+	from fs import open_fs
+	from fs.path import join
+	with setup_test() as testSetup:
+		fs, testDir = testSetup
+		testPath = join(testDir, "testfile")
+		fs2 = open_fs(f"dropbox://{testDir}?access_token={environ['DROPBOX_ACCESS_TOKEN']}")
+		with fs2.open("testfile", "w") as f:
+			f.write("test")
+		assert fs.exists(testPath)
