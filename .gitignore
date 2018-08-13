@@ -8,3 +8,7 @@ dist/
 
 # MacOS
 .DS_Store
+
+# testing
+.pytest_cache
+Pipfile.lock
