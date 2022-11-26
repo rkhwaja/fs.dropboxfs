@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "fs.dropboxfs"
+version = "0.0.4"
+description = "Pyfilesystem2 implementation for Dropbox"
+authors = ["Rehan Khwaja <rehan@khwaja.name>"]
+license = "MIT"
+readme = "README.rst"
+packages = [{include = "fs"}]
+homepage = "https://github.com/rkhwaja/fs.dropboxfs"
+keywords = ["filesystem", "Pyfilesystem2", "dropbox"]
+classifiers = [
+	"License :: OSI Approved :: MIT License",
+	"Development Status :: 5 - Production/Stable",
+	"Intended Audience :: Developers",
+	"Programming Language :: Python :: 3.6",
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.6"
+fs = "~2.0.10"
+dropbox = ">=11.36.0"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.plugins] # Optional super table
+
+[tool.poetry.plugins."fs.opener"]
+"dropbox" = "fs.opener.dropboxfs:DropboxOpener"
+
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
