@@ -12,6 +12,24 @@ on:
       - '*'
 
 jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.check.outputs.valid }}
+    steps:
+      - name: Check for access to secrets
+        id: check
+        env:
+          DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+        run: |
+          valid=0
+          if [ ! -z "DROPBOX_ACCESS_TOKEN" ]
+          then
+            echo "Secrets are available"
+            valid=1
+          else
+            echo "Secrets are not available"
+          fi
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -32,4 +50,12 @@ jobs:
         poetry install
     - name: Linter
       run: |
-        pylint fs tests
+        pylint fs/dropboxfs tests
+    - name: Tests
+      env:
+        DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+      if: ${{needs.secrets.outputs.valid}} == 'true'
+      run: |
+        if python --version | grep -q 'Python 3.11' ; then
+          pytest
+        fi
