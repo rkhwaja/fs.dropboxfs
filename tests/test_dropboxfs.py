@@ -1,4 +1,5 @@
 from contextlib import contextmanager, suppress
+from json import load
 from os import environ
 from time import perf_counter
 from uuid import uuid4
@@ -11,8 +12,9 @@ from fs.dropboxfs import DropboxFS, DropboxOpener
 
 @contextmanager
 def setup_test():
-	token = environ['DROPBOX_ACCESS_TOKEN']
-	fs = DropboxFS(token)
+	with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
+		credentials = load(f)
+	fs = DropboxFS(credentials['access_token'], credentials['refresh_token'])
 	testDir = '/tests/dropboxfs-test-' + uuid4().hex
 	try:
 		assert fs.exists(testDir) is False
@@ -127,7 +129,11 @@ def test_opener():
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 		testPath = join(testDir, 'testfile')
-		fs2 = open_fs(f"dropbox://{testDir}?access_token={environ['DROPBOX_ACCESS_TOKEN']}")
+
+		with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
+			credentials = load(f)
+
+		fs2 = open_fs(f"dropbox://{testDir}?access_token={credentials['access_token']}&refresh_token={credentials['refresh_token']}")
 		with fs2.open('testfile', 'w') as f:
 			f.write('test')
 		assert fs.exists(testPath)

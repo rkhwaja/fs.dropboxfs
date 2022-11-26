@@ -48,9 +48,9 @@ class DropboxFile(BytesIO):
 		self.dropbox = None
 
 class DropboxFS(FS):
-	def __init__(self, accessToken):
+	def __init__(self, accessToken, refreshToken):
 		super().__init__()
-		self.dropbox = Dropbox(accessToken)
+		self.dropbox = Dropbox(accessToken, refreshToken)
 		_meta = self._meta = {
 			'case_insensitive': False, # I think?
 			'invalid_path_chars': ':', # not sure what else
