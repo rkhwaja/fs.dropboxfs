@@ -4,7 +4,7 @@ version = "0.0.4"
 description = "Pyfilesystem2 implementation for Dropbox"
 authors = ["Rehan Khwaja <rehan@khwaja.name>"]
 license = "MIT"
-readme = "README.rst"
+readme = "README.md"
 packages = [{include = "fs"}]
 homepage = "https://github.com/rkhwaja/fs.dropboxfs"
 keywords = ["filesystem", "Pyfilesystem2", "dropbox"]
