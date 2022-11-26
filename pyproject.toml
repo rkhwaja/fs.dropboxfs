@@ -38,7 +38,7 @@ pythonpath = ["."]
 
 [tool.pylint.master]
 load-plugins = [
-	# "pylint_quotes",
+	"pylint_quotes",
 	"pylint.extensions.code_style",
 	"pylint.extensions.confusing_elif",
 	"pylint.extensions.bad_builtin",
@@ -56,7 +56,7 @@ enable="useless-suppression"
 [tool.pylint.format]
 indent-string = "\t"
 max-line-length = "200"
-# string-quote = "single-avoid-escape"
+string-quote = "single-avoid-escape"
 
 [tool.pylint.messages_control]
 disable = [

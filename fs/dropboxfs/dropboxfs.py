@@ -38,9 +38,9 @@ class DropboxFile(BytesIO):
 		if not self.mode.writing:
 			return
 		if self.rev is None:
-			writeMode = WriteMode("add")
+			writeMode = WriteMode('add')
 		else:
-			writeMode = WriteMode("update", self.rev)
+			writeMode = WriteMode('update', self.rev)
 		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # pylint: disable=unused-variable
 		# Make sure that we can't call this again
 		self.path = None
@@ -52,84 +52,84 @@ class DropboxFS(FS):
 		super().__init__()
 		self.dropbox = Dropbox(accessToken)
 		_meta = self._meta = {
-			"case_insensitive": False, # I think?
-			"invalid_path_chars": ":", # not sure what else
-			"max_path_length": None, # don't know what the limit is
-			"max_sys_path_length": None, # there's no syspath
-			"network": True,
-			"read_only": False,
-			"supports_rename": False # since we don't have a syspath...
+			'case_insensitive': False, # I think?
+			'invalid_path_chars': ':', # not sure what else
+			'max_path_length': None, # don't know what the limit is
+			'max_sys_path_length': None, # there's no syspath
+			'network': True,
+			'read_only': False,
+			'supports_rename': False # since we don't have a syspath...
 		}
 
 	def __repr__(self):
-		return "<DropboxDriveFS>"
+		return '<DropboxDriveFS>'
 
 	def _infoFromMetadata(self, metadata):
 		rawInfo = {
-			"basic": {
-				"name": metadata.name,
-				"is_dir": isinstance(metadata, FolderMetadata),
+			'basic': {
+				'name': metadata.name,
+				'is_dir': isinstance(metadata, FolderMetadata),
 			}
 		}
 		if isinstance(metadata, FileMetadata):
 			rawInfo.update({
-			"details": {
-				"accessed": None, # not supported by Dropbox API
-				"created": None, # not supported by Dropbox API?,
-				"metadata_changed": None, # not supported by Dropbox
-				"modified": datetime_to_epoch(metadata.server_modified), # API documentation says that this is reliable
-				"size": metadata.size,
-				"type": 0
+			'details': {
+				'accessed': None, # not supported by Dropbox API
+				'created': None, # not supported by Dropbox API?,
+				'metadata_changed': None, # not supported by Dropbox
+				'modified': datetime_to_epoch(metadata.server_modified), # API documentation says that this is reliable
+				'size': metadata.size,
+				'type': 0
 				},
-			"dropbox": {
-				"content_hash": metadata.content_hash, # see https://www.dropbox.com/developers/reference/content-hash
-				"rev": metadata.rev,
-				"client_modified": metadata.client_modified # unverified value coming from dropbox clients
+			'dropbox': {
+				'content_hash': metadata.content_hash, # see https://www.dropbox.com/developers/reference/content-hash
+				'rev': metadata.rev,
+				'client_modified': metadata.client_modified # unverified value coming from dropbox clients
 				}
 			})
 			if metadata.media_info is not None and metadata.media_info.is_metadata() is True:
 				media_info_metadata = metadata.media_info.get_metadata()
 				if media_info_metadata.time_taken is not None:
 					rawInfo.update({
-						"media_info": {
-							"taken_date_time": datetime_to_epoch(media_info_metadata.time_taken)
+						'media_info': {
+							'taken_date_time': datetime_to_epoch(media_info_metadata.time_taken)
 						}
 					})
 				if media_info_metadata.location is not None:
 					rawInfo.update({
-						"media_info": {
-							"location_latitude": media_info_metadata.location.latitude,
-							"location_longitude": media_info_metadata.location.longitude
+						'media_info': {
+							'location_latitude': media_info_metadata.location.latitude,
+							'location_longitude': media_info_metadata.location.longitude
 						}
 					})
 				# Dropbox doesn't parse some jpgs properly
 				if media_info_metadata.dimensions is not None:
 					rawInfo.update({
-						"media_info": {
-							"dimensions_height": media_info_metadata.dimensions.height,
-							"dimensions_width": media_info_metadata.dimensions.width
+						'media_info': {
+							'dimensions_height': media_info_metadata.dimensions.height,
+							'dimensions_width': media_info_metadata.dimensions.width
 						}
 					})
 		elif isinstance(metadata, FolderMetadata): # pylint: disable=confusing-consecutive-elif
 			rawInfo.update({
-			"details": {
-				"accessed": None, # not supported by Dropbox API
-				"created": None, # not supported by Dropbox API,
-				"metadata_changed": None, # not supported by Dropbox
-				"modified": None, # not supported for folders
-				"size": None, # not supported for folders
-				"type": 1
+			'details': {
+				'accessed': None, # not supported by Dropbox API
+				'created': None, # not supported by Dropbox API,
+				'metadata_changed': None, # not supported by Dropbox
+				'modified': None, # not supported for folders
+				'size': None, # not supported for folders
+				'type': 1
 				}})
 		else:
-			assert False, f"{metadata.name}, {metadata}, {type(metadata)}"
+			assert False, f'{metadata.name}, {metadata}, {type(metadata)}'
 		return Info(rawInfo)
 
 	def getinfo(self, path, namespaces=None):
-		if path == "/":
-			return Info({"basic": {"name": "", "is_dir": True}})
+		if path == '/':
+			return Info({'basic': {'name': '', 'is_dir': True}})
 		try:
-			if not path.startswith("/"):
-				path = "/" + path
+			if not path.startswith('/'):
+				path = '/' + path
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
 			raise ResourceNotFound(path=path) from e
@@ -152,7 +152,7 @@ class DropboxFS(FS):
 		# don't need to close this filesystem so we return the non-closing version
 		return SubFS(self, path)
 
-	def openbin(self, path, mode="r", buffering=-1, **options):
+	def openbin(self, path, mode='r', buffering=-1, **options):
 		mode = Mode(mode)
 		exists = True
 		isDir = False
@@ -183,8 +183,8 @@ class DropboxFS(FS):
 
 	# non-essential method - for speeding up walk
 	def scandir(self, path, namespaces=None, page=None):
-		if path == "/":
-			path = ""
+		if path == '/':
+			path = ''
 		# get all the avaliable metadata since it's cheap
 		# TODO - this call has a recursive flag so we can either use that and cache OR override walk
 		result = self.dropbox.files_list_folder(path, include_media_info=True)
