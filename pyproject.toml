@@ -28,12 +28,20 @@ pylint = ">=2.15.6"
 pylint-quotes = ">=0.2.3"
 pytest = ">=7.2.0"
 pyperclip = ">=1.8.2"
+poethepoet = ">=0.16.4"
 
 [tool.poetry.plugins] # Optional super table
 
 [tool.poetry.plugins."fs.opener"]
 "dropbox" = "fs.dropboxfs.opener:DropboxOpener"
 
+[tool.poe.tasks]
+lint = "pylint fs/dropboxfs/ tests/"
+
+[tool.poe.tasks.test]
+shell = """
+pytest || exit 1
+"""
 
 [tool.pylint.master]
 load-plugins = [
