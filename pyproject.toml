@@ -34,8 +34,6 @@ pyperclip = ">=1.8.2"
 [tool.poetry.plugins."fs.opener"]
 "dropbox" = "fs.dropboxfs.opener:DropboxOpener"
 
-[tool.pytest]
-pythonpath = ["."]
 
 [tool.pylint.master]
 load-plugins = [
