@@ -1,5 +1,5 @@
 from contextlib import contextmanager, suppress
-from json import load
+from json import load, loads
 from os import environ
 from time import perf_counter
 from uuid import uuid4
@@ -10,10 +10,16 @@ from fs.path import join
 
 from fs.dropboxfs import DropboxFS, DropboxOpener
 
+def LoadCredentials():
+	if 'DROPBOX_CREDENTIALS_FOR_CI' in environ:
+		return loads(environ['DROPBOX_CREDENTIALS_FOR_CI'])
+
+	with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
+		return load(f)
+
 @contextmanager
 def setup_test():
-	with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
-		credentials = load(f)
+	credentials = LoadCredentials()
 	fs = DropboxFS(credentials['access_token'], credentials['refresh_token'])
 	testDir = '/tests/dropboxfs-test-' + uuid4().hex
 	try:
@@ -130,8 +136,7 @@ def test_opener():
 		fs, testDir = testSetup
 		testPath = join(testDir, 'testfile')
 
-		with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
-			credentials = load(f)
+		credentials = LoadCredentials()
 
 		fs2 = open_fs(f"dropbox://{testDir}?access_token={credentials['access_token']}&refresh_token={credentials['refresh_token']}")
 		with fs2.open('testfile', 'w') as f:
