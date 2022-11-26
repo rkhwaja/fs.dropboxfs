@@ -13,3 +13,4 @@ poetry.lock
 # testing
 .pytest_cache
 .env
+cred.json

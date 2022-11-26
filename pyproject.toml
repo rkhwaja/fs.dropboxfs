@@ -27,6 +27,7 @@ dropbox = ">=11.36.0"
 pylint = ">=2.15.6"
 pylint-quotes = ">=0.2.3"
 pytest = ">=7.2.0"
+pyperclip = ">=1.8.2"
 
 [tool.poetry.plugins] # Optional super table
 
@@ -66,6 +67,7 @@ disable = [
 	"invalid-name",
 	"missing-docstring",
 	"too-many-locals",
+	"line-too-long",
 	"logging-fstring-interpolation",
 	"no-name-in-module" # currently has a bunch of false positives on python 3.11
 ]
