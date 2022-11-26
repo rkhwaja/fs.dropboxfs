@@ -3,14 +3,14 @@ from datetime import datetime
 from io import BytesIO
 
 from dropbox import Dropbox
-from dropbox.files import DownloadError, FileMetadata, FolderMetadata, WriteMode
-from dropbox.exceptions import ApiError
-from fs.base import FS
-from fs.errors import FileExpected, ResourceNotFound
-from fs.info import Info
-from fs.mode import Mode
-from fs.subfs import SubFS
-from fs.time import datetime_to_epoch, epoch_to_datetime
+from dropbox.files import CreateFolderError, FileMetadata, FolderMetadata, WriteMode
+from dropbox.exceptions import ApiError, DeleteError
+from fs.base import FS # pylint: disable=import-error
+from fs.errors import DirectoryExpected, FileExists, FileExpected, ResourceNotFound # pylint: disable=import-error
+from fs.info import Info # pylint: disable=import-error
+from fs.mode import Mode # pylint: disable=import-error
+from fs.subfs import SubFS # pylint: disable=import-error
+from fs.time import datetime_to_epoch # pylint: disable=import-error
 
 class DropboxFile(BytesIO):
 	def __init__(self, dropbox, path, mode):
@@ -41,7 +41,7 @@ class DropboxFile(BytesIO):
 			writeMode = WriteMode("add")
 		else:
 			writeMode = WriteMode("update", self.rev)
-		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False)
+		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # pylint: disable=unused-variable
 		# Make sure that we can't call this again
 		self.path = None
 		self.mode = None
@@ -64,7 +64,7 @@ class DropboxFS(FS):
 	def __repr__(self):
 		return "<DropboxDriveFS>"
 
-	def _infoFromMetadata(self, metadata): # pylint: disable=no-self-use
+	def _infoFromMetadata(self, metadata):
 		rawInfo = {
 			"basic": {
 				"name": metadata.name,
@@ -110,7 +110,7 @@ class DropboxFS(FS):
 							"dimensions_width": media_info_metadata.dimensions.width
 						}
 					})
-		elif isinstance(metadata, FolderMetadata):
+		elif isinstance(metadata, FolderMetadata): # pylint: disable=confusing-consecutive-elif
 			rawInfo.update({
 			"details": {
 				"accessed": None, # not supported by Dropbox API
@@ -124,7 +124,7 @@ class DropboxFS(FS):
 			assert False, f"{metadata.name}, {metadata}, {type(metadata)}"
 		return Info(rawInfo)
 
-	def getinfo(self, path, namespaces=None):
+	def getinfo(self, path, namespaces=None): # pylint: disable=unused-argument
 		if path == "/":
 			return Info({"basic": {"name": "", "is_dir": True}})
 		try:
@@ -132,27 +132,27 @@ class DropboxFS(FS):
 				path = "/" + path
 			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 		except ApiError as e:
-			raise ResourceNotFound(path=path, exc=e)
+			raise ResourceNotFound(path=path) from e
 		return self._infoFromMetadata(metadata)
 
-	def setinfo(self, path, info): # pylint: disable=too-many-branches
+	def setinfo(self, path, info):
 		# dropbox doesn't support changing any of the metadata values
 		pass
 
 	def listdir(self, path):
 		return [x.name for x in self.scandir(path)]
 
-	def makedir(self, path, permissions=None, recreate=False):
+	def makedir(self, path, permissions=None, recreate=False): # pylint: disable=unused-argument
 		try:
-			folderMetadata = self.dropbox.files_create_folder(path)
+			folderMetadata = self.dropbox.files_create_folder(path) # pylint: disable=unused-variable
 		except ApiError as e:
-			assert isinstance(e.reason, CreateFolderError)
+			assert isinstance(e.error, CreateFolderError)
 			# TODO - there are other possibilities
-			raise DirectoryExpected(path=path)
+			raise DirectoryExpected(path=path) from e
 		# don't need to close this filesystem so we return the non-closing version
 		return SubFS(self, path)
 
-	def openbin(self, path, mode="r", buffering=-1, **options):
+	def openbin(self, path, mode="r", buffering=-1, **options): # pylint: disable=unused-argument
 		mode = Mode(mode)
 		exists = True
 		isDir = False
@@ -162,9 +162,9 @@ class DropboxFS(FS):
 			exists = False
 		if mode.exclusive and exists:
 			raise FileExists(path)
-		elif mode.reading and not mode.create and not exists:
+		if mode.reading and not mode.create and not exists:
 			raise ResourceNotFound(path)
-		elif isDir:
+		if isDir:
 			raise FileExpected(path)
 		return DropboxFile(self.dropbox, path, mode)
 
@@ -172,18 +172,17 @@ class DropboxFS(FS):
 		try:
 			self.dropbox.files_delete(path)
 		except ApiError as e:
-			raise FileExpected(path=path, exc=e)
+			raise FileExpected(path=path) from e
 
 	def removedir(self, path):
 		try:
 			self.dropbox.files_delete(path)
 		except ApiError as e:
-			assert e.reason is DeleteError
-			raise DirectoryExpected(path=path, exc=e)
+			assert e.error is DeleteError
+			raise DirectoryExpected(path=path) from e
 
 	# non-essential method - for speeding up walk
-	def scandir(self, path, namespaces=None, page=None):
-		# 
+	def scandir(self, path, namespaces=None, page=None): # pylint: disable=unused-argument
 		if path == "/":
 			path = ""
 		# get all the avaliable metadata since it's cheap

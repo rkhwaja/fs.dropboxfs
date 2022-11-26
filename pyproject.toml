@@ -12,8 +12,6 @@ classifiers = [
 	"License :: OSI Approved :: MIT License",
 	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: Developers",
-	"Programming Language :: Python :: 3.6",
-	"Programming Language :: Python :: 3.7",
 	"Programming Language :: Python :: 3.8",
 	"Programming Language :: Python :: 3.9",
 	"Programming Language :: Python :: 3.10",
@@ -21,16 +19,52 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6"
+python = ">=3.8"
 fs = "~2.0.10"
 dropbox = ">=11.36.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+pylint = ">=2.15.6"
+pylint-quotes = ">=0.2.3"
 
 [tool.poetry.plugins] # Optional super table
 
 [tool.poetry.plugins."fs.opener"]
 "dropbox" = "fs.opener.dropboxfs:DropboxOpener"
+
+[tool.pylint.master]
+load-plugins = [
+	# "pylint_quotes",
+	"pylint.extensions.code_style",
+	"pylint.extensions.confusing_elif",
+	"pylint.extensions.bad_builtin",
+	"pylint.extensions.bad_builtin",
+	# "pylint.extensions.mccabe",
+	"pylint.extensions.check_elif",
+	"pylint.extensions.redefined_variable_type",
+	"pylint.extensions.overlapping_exceptions",
+	"pylint.extensions.empty_comment",
+	"pylint.extensions.set_membership",
+	# "pylint.extensions.while_used",
+	]
+enable="useless-suppression"
+
+[tool.pylint.format]
+indent-string = "\t"
+max-line-length = "200"
+# string-quote = "single-avoid-escape"
+
+[tool.pylint.messages_control]
+disable = [
+	"consider-using-assignment-expr",
+	"duplicate-code",
+	"fixme",
+	"invalid-name",
+	"missing-docstring",
+	"too-many-locals",
+	"logging-fstring-interpolation",
+	"no-name-in-module" # currently has a bunch of false positives on python 3.11
+]
 
 [build-system]
 requires = ["poetry_core>=1.0.0"]
