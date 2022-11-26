@@ -50,12 +50,12 @@ jobs:
         poetry install
     - name: Linter
       run: |
-        pylint fs/dropboxfs tests
+        poe lint
     - name: Tests
       env:
         DROPBOX_CREDENTIALS_FOR_CI: ${{ secrets.DROPBOX_CREDENTIALS_FOR_CI }}
       if: ${{needs.secrets.outputs.valid}} == 'true'
       run: |
         if python --version | grep -q 'Python 3.11' ; then
-          pytest
+          poe test
         fi
