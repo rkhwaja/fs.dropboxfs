@@ -3,14 +3,14 @@ from datetime import datetime
 from io import BytesIO
 
 from dropbox import Dropbox
-from dropbox.files import CreateFolderError, FileMetadata, FolderMetadata, WriteMode
-from dropbox.exceptions import ApiError, DeleteError
-from fs.base import FS # pylint: disable=import-error
-from fs.errors import DirectoryExpected, FileExists, FileExpected, ResourceNotFound # pylint: disable=import-error
-from fs.info import Info # pylint: disable=import-error
-from fs.mode import Mode # pylint: disable=import-error
-from fs.subfs import SubFS # pylint: disable=import-error
-from fs.time import datetime_to_epoch # pylint: disable=import-error
+from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMetadata, WriteMode
+from dropbox.exceptions import ApiError
+from fs.base import FS
+from fs.errors import DirectoryExpected, FileExists, FileExpected, ResourceNotFound
+from fs.info import Info
+from fs.mode import Mode
+from fs.subfs import SubFS
+from fs.time import datetime_to_epoch
 
 class DropboxFile(BytesIO):
 	def __init__(self, dropbox, path, mode):
@@ -124,7 +124,7 @@ class DropboxFS(FS):
 			assert False, f"{metadata.name}, {metadata}, {type(metadata)}"
 		return Info(rawInfo)
 
-	def getinfo(self, path, namespaces=None): # pylint: disable=unused-argument
+	def getinfo(self, path, namespaces=None):
 		if path == "/":
 			return Info({"basic": {"name": "", "is_dir": True}})
 		try:
@@ -142,7 +142,7 @@ class DropboxFS(FS):
 	def listdir(self, path):
 		return [x.name for x in self.scandir(path)]
 
-	def makedir(self, path, permissions=None, recreate=False): # pylint: disable=unused-argument
+	def makedir(self, path, permissions=None, recreate=False):
 		try:
 			folderMetadata = self.dropbox.files_create_folder(path) # pylint: disable=unused-variable
 		except ApiError as e:
@@ -152,7 +152,7 @@ class DropboxFS(FS):
 		# don't need to close this filesystem so we return the non-closing version
 		return SubFS(self, path)
 
-	def openbin(self, path, mode="r", buffering=-1, **options): # pylint: disable=unused-argument
+	def openbin(self, path, mode="r", buffering=-1, **options):
 		mode = Mode(mode)
 		exists = True
 		isDir = False
@@ -182,7 +182,7 @@ class DropboxFS(FS):
 			raise DirectoryExpected(path=path) from e
 
 	# non-essential method - for speeding up walk
-	def scandir(self, path, namespaces=None, page=None): # pylint: disable=unused-argument
+	def scandir(self, path, namespaces=None, page=None):
 		if path == "/":
 			path = ""
 		# get all the avaliable metadata since it's cheap

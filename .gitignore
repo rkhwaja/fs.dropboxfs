@@ -5,10 +5,11 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+poetry.lock
 
 # MacOS
 .DS_Store
 
 # testing
 .pytest_cache
-Pipfile.lock
+.env

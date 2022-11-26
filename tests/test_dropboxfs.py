@@ -3,11 +3,11 @@ from os import environ
 from time import perf_counter
 from uuid import uuid4
 
-from fs import open_fs
-from fs.errors import FileExpected, ResourceNotFound # pylint: disable=import-error
-from fs.path import join # pylint: disable=import-error
+from fs.errors import FileExpected, ResourceNotFound
+from fs.opener import open_fs, registry
+from fs.path import join
 
-from fs.dropboxfs import DropboxFS
+from fs.dropboxfs import DropboxFS, DropboxOpener
 
 @contextmanager
 def setup_test():
@@ -123,6 +123,7 @@ def test_speed():
 		print(f"Time for walk {perf_counter() - startTime}")
 
 def test_opener():
+	registry.install(DropboxOpener())
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 		testPath = join(testDir, "testfile")
