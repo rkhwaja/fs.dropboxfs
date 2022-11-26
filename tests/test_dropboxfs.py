@@ -1,12 +1,16 @@
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from os import environ
+from time import perf_counter
+from uuid import uuid4
+
+from fs import open_fs
+from fs.errors import FileExpected, ResourceNotFound # pylint: disable=import-error
+from fs.path import join # pylint: disable=import-error
 
 from fs.dropboxfs import DropboxFS
 
 @contextmanager
 def setup_test():
-	from os import environ
-	from uuid import uuid4
 	token = environ["DROPBOX_ACCESS_TOKEN"]
 	fs = DropboxFS(token)
 	testDir = "/tests/dropboxfs-test-" + uuid4().hex
@@ -20,9 +24,7 @@ def setup_test():
 	return fs, testDir
 
 def test():
-	from contextlib import suppress
-	from fs.path import join
-	
+
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 
@@ -65,9 +67,6 @@ def assert_contents(fs, path, expectedContents):
 		assert contents == expectedContents, f"'{contents}'"
 
 def test_versions():
-	from contextlib import suppress
-	from fs.path import join
-
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 
@@ -86,10 +85,6 @@ def test_versions():
 			fs.remove(path)
 
 def test_open_modes():
-	from contextlib import suppress
-	from io import SEEK_END
-	from fs.path import join
-
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 
@@ -110,30 +105,24 @@ def test_open_modes():
 		assert not fs.exists(path)
 
 def test_speed():
-	from time import perf_counter
-	from fs.path import join
-
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 
 		startTime = perf_counter()
-		for directory in ["a", "b", "c", "d"]:
+		for directory in ("a", "b", "c", "d"):
 			thisDirFS = fs.makedir(join(testDir, directory))
-			for filename in ["A", "B", "C", "D"]:
+			for filename in ("A", "B", "C", "D"):
 				with thisDirFS.open(filename, "w") as f:
 					f.write(filename)
 		print(f"Time for makedir/openbin {perf_counter() - startTime}")
 
 		testDirFS = fs.opendir(testDir)
 		startTime = perf_counter()
-		for path, info_ in testDirFS.walk.info(namespaces=["basic", "details"]):
+		for path, info_ in testDirFS.walk.info(namespaces=["basic", "details"]): # pylint: disable=unused-variable
 			pass
 		print(f"Time for walk {perf_counter() - startTime}")
 
 def test_opener():
-	from os import environ
-	from fs import open_fs
-	from fs.path import join
 	with setup_test() as testSetup:
 		fs, testDir = testSetup
 		testPath = join(testDir, "testfile")
