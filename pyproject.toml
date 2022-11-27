@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fs.dropboxfs"
-version = "0.0.4"
+version = "0.3.0"
 description = "Pyfilesystem2 implementation for Dropbox"
 authors = ["Rehan Khwaja <rehan@khwaja.name>"]
 license = "MIT"
