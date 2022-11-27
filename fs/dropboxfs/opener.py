@@ -9,7 +9,14 @@ class DropboxOpener(Opener): # pylint: disable=too-few-public-methods
 
 	def open_fs(self, fs_url, parse_result, writeable, create, cwd): # pylint: disable=too-many-arguments
 		_, _, directory = parse_result.resource.partition('/')
-		fs = DropboxFS(accessToken=parse_result.params['access_token'], refreshToken=parse_result.params['refresh_token'])
+		options = {
+			'access_token': parse_result.params.get('access_token'),
+			'refresh_token': parse_result.params.get('refresh_token'),
+			'app_key': parse_result.params.get('app_key'),
+			'app_secret': parse_result.params.get('app_secret')
+		}
+
+		fs = DropboxFS(**options)
 
 		if directory:
 			return fs.opendir(directory)
