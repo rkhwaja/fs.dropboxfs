@@ -16,5 +16,5 @@ dropboxFS = DropboxFS(
 
 dropboxFS2 = open_fs('dropbox:///somedirectory?access_token=your_access_token&refresh_token=your_refresh_token')
 
-# dropboxFS and dropboxFS2 are now a standard [pyfilesystem2](https://github.com/PyFilesystem/pyfilesystem2) file system
+# dropboxFS and dropboxFS2 are now a standard pyfilesystem2 file system
 ```
