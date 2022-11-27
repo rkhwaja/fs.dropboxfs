@@ -48,9 +48,13 @@ class DropboxFile(BytesIO):
 		self.dropbox = None
 
 class DropboxFS(FS):
-	def __init__(self, accessToken, refreshToken):
+	def __init__(self, access_token=None, refresh_token=None, app_key=None, app_secret=None):
+		"""Provide one of:
+		1) accessToken (if you have a long-lived access token or won't need a refresh)
+		2) refreshToken and appKey (if you don't need an app secret to refresh)
+		3) refreshToken, appKey and appSecret (if you do need an app secret to refresh)"""
 		super().__init__()
-		self.dropbox = Dropbox(accessToken, refreshToken)
+		self.dropbox = Dropbox(oauth2_access_token=access_token, oauth2_refresh_token=refresh_token, app_key=app_key, app_secret=app_secret)
 		_meta = self._meta = {
 			'case_insensitive': False, # I think?
 			'invalid_path_chars': ':', # not sure what else

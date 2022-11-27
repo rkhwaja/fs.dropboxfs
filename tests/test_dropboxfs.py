@@ -20,7 +20,7 @@ def LoadCredentials():
 @contextmanager
 def setup_test():
 	credentials = LoadCredentials()
-	fs = DropboxFS(credentials['access_token'], credentials['refresh_token'])
+	fs = DropboxFS(refresh_token=credentials.get('refresh_token'), app_key=credentials.get('app_key'), app_secret=credentials.get('app_secret'))
 	testDir = '/tests/dropboxfs-test-' + uuid4().hex
 	try:
 		assert fs.exists(testDir) is False
@@ -138,7 +138,7 @@ def test_opener():
 
 		credentials = LoadCredentials()
 
-		fs2 = open_fs(f"dropbox://{testDir}?access_token={credentials['access_token']}&refresh_token={credentials['refresh_token']}")
+		fs2 = open_fs(f"dropbox://{testDir}?refresh_token={credentials['refresh_token']}&app_key={credentials['app_key']}&app_secret={credentials['app_secret']}")
 		with fs2.open('testfile', 'w') as f:
 			f.write('test')
 		assert fs.exists(testPath)
