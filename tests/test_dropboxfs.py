@@ -2,11 +2,13 @@ from contextlib import contextmanager, suppress
 from json import load, loads
 from os import environ
 from time import perf_counter
+from unittest import TestCase
 from uuid import uuid4
 
 from fs.errors import FileExpected, ResourceNotFound
 from fs.opener import open_fs, registry
 from fs.path import join
+from fs.test import FSTestCases
 
 from fs.dropboxfs import DropboxFS, DropboxOpener
 
@@ -16,6 +18,19 @@ def LoadCredentials():
 
 	with open(environ['DROPBOX_CREDENTIALS_PATH'], encoding='utf-8') as f:
 		return load(f)
+
+def FullFS():
+	credentials = LoadCredentials()
+	return DropboxFS(refresh_token=credentials.get('refresh_token'), app_key=credentials.get('app_key'), app_secret=credentials.get('app_secret'))
+
+class TestDropboxFS(FSTestCases, TestCase):
+	def make_fs(self):
+		self.fullFS = FullFS()
+		self.testSubdir = f'/tests/dropboxfs-test-{uuid4()}'
+		return self.fullFS.makedirs(self.testSubdir)
+
+	def destroy_fs(self, _):
+		self.fullFS.removetree(self.testSubdir)
 
 @contextmanager
 def setup_test():
@@ -27,7 +42,7 @@ def setup_test():
 		fs.makedir(testDir)
 		yield (fs, testDir)
 	finally:
-		fs.removedir(testDir)
+		fs.removetree(testDir)
 		fs.close()
 	return fs, testDir
 
