@@ -148,7 +148,7 @@ class DropboxFS(FS):
 
 	def makedir(self, path, permissions=None, recreate=False):
 		try:
-			folderMetadata = self.dropbox.files_create_folder(path) # pylint: disable=unused-variable
+			folderMetadata = self.dropbox.files_create_folder_v2(path) # pylint: disable=unused-variable
 		except ApiError as e:
 			assert isinstance(e.error, CreateFolderError)
 			# TODO - there are other possibilities
@@ -174,13 +174,13 @@ class DropboxFS(FS):
 
 	def remove(self, path):
 		try:
-			self.dropbox.files_delete(path)
+			self.dropbox.files_delete_v2(path)
 		except ApiError as e:
 			raise FileExpected(path=path) from e
 
 	def removedir(self, path):
 		try:
-			self.dropbox.files_delete(path)
+			self.dropbox.files_delete_v2(path)
 		except ApiError as e:
 			assert e.error is DeleteError
 			raise DirectoryExpected(path=path) from e
