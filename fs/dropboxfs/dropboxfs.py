@@ -15,6 +15,66 @@ from fs.path import dirname
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
+def _infoFromMetadata(metadata):
+	rawInfo = {
+		'basic': {
+			'name': metadata.name,
+			'is_dir': isinstance(metadata, FolderMetadata),
+		}
+	}
+	if isinstance(metadata, FileMetadata):
+		rawInfo.update({
+		'details': {
+			'accessed': None, # not supported by Dropbox API
+			'created': None, # not supported by Dropbox API?,
+			'metadata_changed': None, # not supported by Dropbox
+			'modified': datetime_to_epoch(metadata.server_modified), # API documentation says that this is reliable
+			'size': metadata.size,
+			'type': ResourceType.file if metadata.symlink_info is None else ResourceType.symlink
+			},
+		'dropbox': {
+			'content_hash': metadata.content_hash, # see https://www.dropbox.com/developers/reference/content-hash
+			'rev': metadata.rev,
+			'client_modified': datetime_to_epoch(metadata.client_modified) # unverified value coming from dropbox clients
+			}
+		})
+		if metadata.media_info is not None and metadata.media_info.is_metadata() is True:
+			media_info_metadata = metadata.media_info.get_metadata()
+			if media_info_metadata.time_taken is not None:
+				rawInfo.update({
+					'media_info': {
+						'taken_date_time': datetime_to_epoch(media_info_metadata.time_taken)
+					}
+				})
+			if media_info_metadata.location is not None:
+				rawInfo.update({
+					'media_info': {
+						'location_latitude': media_info_metadata.location.latitude,
+						'location_longitude': media_info_metadata.location.longitude
+					}
+				})
+			# Dropbox doesn't parse some jpgs properly
+			if media_info_metadata.dimensions is not None:
+				rawInfo.update({
+					'media_info': {
+						'dimensions_height': media_info_metadata.dimensions.height,
+						'dimensions_width': media_info_metadata.dimensions.width
+					}
+				})
+	elif isinstance(metadata, FolderMetadata): # pylint: disable=confusing-consecutive-elif
+		rawInfo.update({
+		'details': {
+			'accessed': None, # not supported by Dropbox API
+			'created': None, # not supported by Dropbox API,
+			'metadata_changed': None, # not supported by Dropbox
+			'modified': None, # not supported for folders
+			'size': None, # not supported for folders
+			'type': ResourceType.directory
+			}})
+	else:
+		assert False, f'{metadata.name}, {metadata}, {type(metadata)}'
+	return Info(rawInfo)
+
 class DropboxFile(BytesIO):
 	def __init__(self, dropbox, path, mode):
 		self.dropbox = dropbox
@@ -115,66 +175,6 @@ class DropboxFS(FS):
 	def __repr__(self):
 		return 'DropboxFS()'
 
-	def _infoFromMetadata(self, metadata):
-		rawInfo = {
-			'basic': {
-				'name': metadata.name,
-				'is_dir': isinstance(metadata, FolderMetadata),
-			}
-		}
-		if isinstance(metadata, FileMetadata):
-			rawInfo.update({
-			'details': {
-				'accessed': None, # not supported by Dropbox API
-				'created': None, # not supported by Dropbox API?,
-				'metadata_changed': None, # not supported by Dropbox
-				'modified': datetime_to_epoch(metadata.server_modified), # API documentation says that this is reliable
-				'size': metadata.size,
-				'type': ResourceType.file if metadata.symlink_info is None else ResourceType.symlink
-				},
-			'dropbox': {
-				'content_hash': metadata.content_hash, # see https://www.dropbox.com/developers/reference/content-hash
-				'rev': metadata.rev,
-				'client_modified': datetime_to_epoch(metadata.client_modified) # unverified value coming from dropbox clients
-				}
-			})
-			if metadata.media_info is not None and metadata.media_info.is_metadata() is True:
-				media_info_metadata = metadata.media_info.get_metadata()
-				if media_info_metadata.time_taken is not None:
-					rawInfo.update({
-						'media_info': {
-							'taken_date_time': datetime_to_epoch(media_info_metadata.time_taken)
-						}
-					})
-				if media_info_metadata.location is not None:
-					rawInfo.update({
-						'media_info': {
-							'location_latitude': media_info_metadata.location.latitude,
-							'location_longitude': media_info_metadata.location.longitude
-						}
-					})
-				# Dropbox doesn't parse some jpgs properly
-				if media_info_metadata.dimensions is not None:
-					rawInfo.update({
-						'media_info': {
-							'dimensions_height': media_info_metadata.dimensions.height,
-							'dimensions_width': media_info_metadata.dimensions.width
-						}
-					})
-		elif isinstance(metadata, FolderMetadata): # pylint: disable=confusing-consecutive-elif
-			rawInfo.update({
-			'details': {
-				'accessed': None, # not supported by Dropbox API
-				'created': None, # not supported by Dropbox API,
-				'metadata_changed': None, # not supported by Dropbox
-				'modified': None, # not supported for folders
-				'size': None, # not supported for folders
-				'type': ResourceType.directory
-				}})
-		else:
-			assert False, f'{metadata.name}, {metadata}, {type(metadata)}'
-		return Info(rawInfo)
-
 	def getinfo(self, path, namespaces=None):
 		path = self.validatepath(path)
 		if path == '/':
@@ -184,7 +184,7 @@ class DropboxFS(FS):
 				metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 			except ApiError as e:
 				raise ResourceNotFound(path=path) from e
-			return self._infoFromMetadata(metadata)
+			return _infoFromMetadata(metadata)
 
 	def setinfo(self, path, info): # pylint: disable=redefined-outer-name
 		# dropbox doesn't support changing any of the metadata values
@@ -291,4 +291,4 @@ class DropboxFS(FS):
 				allEntries += result.entries
 			if page is not None:
 				allEntries = allEntries[page[0]: page[1]]
-			return (self._infoFromMetadata(x) for x in allEntries)
+			return (_infoFromMetadata(x) for x in allEntries)
