@@ -176,12 +176,11 @@ class DropboxFS(FS):
 		return Info(rawInfo)
 
 	def getinfo(self, path, namespaces=None):
+		path = self.validatepath(path)
 		if path == '/':
 			return Info({'basic': {'name': '', 'is_dir': True}})
 		with self._lock:
 			try:
-				if not path.startswith('/'):
-					path = '/' + path
 				metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
 			except ApiError as e:
 				raise ResourceNotFound(path=path) from e
@@ -189,12 +188,13 @@ class DropboxFS(FS):
 
 	def setinfo(self, path, info): # pylint: disable=redefined-outer-name
 		# dropbox doesn't support changing any of the metadata values
+		path = self.validatepath(path)
 		with self._lock:
-			path = self.validatepath(path)
 			if self.exists(path) is False:
 				raise ResourceNotFound(path)
 
 	def listdir(self, path):
+		path = self.validatepath(path)
 		with self._lock:
 			return [x.name for x in self.scandir(path)]
 
@@ -247,6 +247,7 @@ class DropboxFS(FS):
 			return DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
+		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
 				raise ResourceNotFound(path=path)
@@ -258,6 +259,7 @@ class DropboxFS(FS):
 				raise FileExpected(path=path) from e
 
 	def removedir(self, path):
+		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
 				raise ResourceNotFound(path=path)
@@ -273,8 +275,7 @@ class DropboxFS(FS):
 
 	# non-essential method - for speeding up walk
 	def scandir(self, path, namespaces=None, page=None):
-		if path == '/':
-			path = ''
+		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
 				raise ResourceNotFound(path=path)
