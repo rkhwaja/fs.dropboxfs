@@ -113,7 +113,7 @@ class DropboxFS(FS):
 		}
 
 	def __repr__(self):
-		return '<DropboxDriveFS>'
+		return 'DropboxFS()'
 
 	def _infoFromMetadata(self, metadata):
 		rawInfo = {
@@ -130,7 +130,7 @@ class DropboxFS(FS):
 				'metadata_changed': None, # not supported by Dropbox
 				'modified': datetime_to_epoch(metadata.server_modified), # API documentation says that this is reliable
 				'size': metadata.size,
-				'type': ResourceType.file
+				'type': ResourceType.file if metadata.symlink_info is None else ResourceType.symlink
 				},
 			'dropbox': {
 				'content_hash': metadata.content_hash, # see https://www.dropbox.com/developers/reference/content-hash
