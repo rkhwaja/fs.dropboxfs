@@ -178,45 +178,49 @@ class DropboxFS(FS):
 	def getinfo(self, path, namespaces=None):
 		if path == '/':
 			return Info({'basic': {'name': '', 'is_dir': True}})
-		try:
-			if not path.startswith('/'):
-				path = '/' + path
-			metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
-		except ApiError as e:
-			raise ResourceNotFound(path=path) from e
-		return self._infoFromMetadata(metadata)
+		with self._lock:
+			try:
+				if not path.startswith('/'):
+					path = '/' + path
+				metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
+			except ApiError as e:
+				raise ResourceNotFound(path=path) from e
+			return self._infoFromMetadata(metadata)
 
 	def setinfo(self, path, info): # pylint: disable=redefined-outer-name
 		# dropbox doesn't support changing any of the metadata values
-		path = self.validatepath(path)
-		if self.exists(path) is False:
-			raise ResourceNotFound(path)
+		with self._lock:
+			path = self.validatepath(path)
+			if self.exists(path) is False:
+				raise ResourceNotFound(path)
 
 	def listdir(self, path):
-		return [x.name for x in self.scandir(path)]
+		with self._lock:
+			return [x.name for x in self.scandir(path)]
 
 	def makedir(self, path, permissions=None, recreate=False):
 		path = self.validatepath(path)
-		if self.exists(path):
-			if self.isdir(path):
-				if recreate is False:
-					raise DirectoryExists(path=path)
-				return SubFS(self, path)
-			raise DirectoryExists(path)
+		with self._lock:
+			if self.exists(path):
+				if self.isdir(path):
+					if recreate is False:
+						raise DirectoryExists(path=path)
+					return SubFS(self, path)
+				raise DirectoryExists(path)
 
-		# check that the parent directory exists
-		parentDir = dirname(path)
-		if not self.exists(parentDir):
-			raise ResourceNotFound(path=path)
+			# check that the parent directory exists
+			parentDir = dirname(path)
+			if not self.exists(parentDir):
+				raise ResourceNotFound(path=path)
 
-		try:
-			folderMetadata = self.dropbox.files_create_folder_v2(path) # pylint: disable=unused-variable
-		except ApiError as e:
-			assert isinstance(e.error, CreateFolderError)
-			# TODO - there are other possibilities
-			raise DirectoryExpected(path=path) from e
-		# don't need to close this filesystem so we return the non-closing version
-		return SubFS(self, path)
+			try:
+				folderMetadata = self.dropbox.files_create_folder_v2(path) # pylint: disable=unused-variable
+			except ApiError as e:
+				assert isinstance(e.error, CreateFolderError)
+				# TODO - there are other possibilities
+				raise DirectoryExpected(path=path) from e
+			# don't need to close this filesystem so we return the non-closing version
+			return SubFS(self, path)
 
 	def openbin(self, path, mode='r', buffering=-1, **options):
 		if 't' in mode:
@@ -225,61 +229,65 @@ class DropboxFS(FS):
 		mode = Mode(mode)
 		exists = True
 		isDir = False
-		try:
-			isDir = self.getinfo(path).is_dir
-		except ResourceNotFound:
-			exists = False
-		if mode.exclusive and exists:
-			raise FileExists(path)
-		if mode.reading and not mode.create and not exists:
-			raise ResourceNotFound(path)
-		if isDir:
-			raise FileExpected(path)
-		if mode.writing: # make sure that the parent directory exists
-			parentDir = dirname(path)
-			# throws ResourceNotFound if the parent dir doesn't exist
-			_ = self.getinfo(parentDir)
-		return DropboxFile(self.dropbox, path, mode)
+		with self._lock:
+			try:
+				isDir = self.getinfo(path).is_dir
+			except ResourceNotFound:
+				exists = False
+			if mode.exclusive and exists:
+				raise FileExists(path)
+			if mode.reading and not mode.create and not exists:
+				raise ResourceNotFound(path)
+			if isDir:
+				raise FileExpected(path)
+			if mode.writing: # make sure that the parent directory exists
+				parentDir = dirname(path)
+				# throws ResourceNotFound if the parent dir doesn't exist
+				_ = self.getinfo(parentDir)
+			return DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
-		if self.exists(path) is False:
-			raise ResourceNotFound(path=path)
-		if self.isdir(path) is True:
-			raise FileExpected(path=path)
-		try:
-			self.dropbox.files_delete_v2(path)
-		except ApiError as e:
-			raise FileExpected(path=path) from e
+		with self._lock:
+			if self.exists(path) is False:
+				raise ResourceNotFound(path=path)
+			if self.isdir(path) is True:
+				raise FileExpected(path=path)
+			try:
+				self.dropbox.files_delete_v2(path)
+			except ApiError as e:
+				raise FileExpected(path=path) from e
 
 	def removedir(self, path):
-		if self.exists(path) is False:
-			raise ResourceNotFound(path=path)
-		if self.isdir(path) is False:
-			raise DirectoryExpected(path=path)
-		if len(self.listdir(path)) > 0:
-			raise DirectoryNotEmpty(path=path)
-		try:
-			self.dropbox.files_delete_v2(path)
-		except ApiError as e:
-			assert isinstance(e.error, DeleteError)
-			raise DirectoryExpected(path=path) from e
+		with self._lock:
+			if self.exists(path) is False:
+				raise ResourceNotFound(path=path)
+			if self.isdir(path) is False:
+				raise DirectoryExpected(path=path)
+			if len(self.listdir(path)) > 0:
+				raise DirectoryNotEmpty(path=path)
+			try:
+				self.dropbox.files_delete_v2(path)
+			except ApiError as e:
+				assert isinstance(e.error, DeleteError)
+				raise DirectoryExpected(path=path) from e
 
 	# non-essential method - for speeding up walk
 	def scandir(self, path, namespaces=None, page=None):
 		if path == '/':
 			path = ''
-		if self.exists(path) is False:
-			raise ResourceNotFound(path=path)
-		if self.isdir(path) is False:
-			raise DirectoryExpected(path=path)
+		with self._lock:
+			if self.exists(path) is False:
+				raise ResourceNotFound(path=path)
+			if self.isdir(path) is False:
+				raise DirectoryExpected(path=path)
 
-		# get all the avaliable metadata since it's cheap
-		# TODO - this call has a recursive flag so we can either use that and cache OR override walk
-		result = self.dropbox.files_list_folder(path, include_media_info=True)
-		allEntries = result.entries
-		while result.has_more:
-			result = self.dropbox.files_list_folder_continue(result.cursor)
-			allEntries += result.entries
-		if page is not None:
-			allEntries = allEntries[page[0]: page[1]]
-		return (self._infoFromMetadata(x) for x in allEntries)
+			# get all the avaliable metadata since it's cheap
+			# TODO - this call has a recursive flag so we can either use that and cache OR override walk
+			result = self.dropbox.files_list_folder(path, include_media_info=True)
+			allEntries = result.entries
+			while result.has_more:
+				result = self.dropbox.files_list_folder_continue(result.cursor)
+				allEntries += result.entries
+			if page is not None:
+				allEntries = allEntries[page[0]: page[1]]
+			return (self._infoFromMetadata(x) for x in allEntries)
