@@ -14,3 +14,4 @@ poetry.lock
 .pytest_cache
 .env
 cred.json
+.vscode
