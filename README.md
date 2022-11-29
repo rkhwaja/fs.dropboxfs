@@ -12,7 +12,9 @@ from fs.dropboxfs import DropboxFS
 
 dropboxFS = DropboxFS(
   accessToken=<your access token>,
-  refreshToken=<your refresh token>)
+  refreshToken=<your refresh token>,
+  app_key=<your app key>,
+  app_secret=<your app secret>)
 
 dropboxFS2 = open_fs('dropbox:///somedirectory?access_token=your_access_token&refresh_token=your_refresh_token')
 
