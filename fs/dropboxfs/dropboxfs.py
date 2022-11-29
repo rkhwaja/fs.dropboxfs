@@ -75,7 +75,7 @@ def _infoFromMetadata(metadata):
 		assert False, f'{metadata.name}, {metadata}, {type(metadata)}'
 	return Info(rawInfo)
 
-class DropboxFile(BytesIO):
+class _DropboxFile(BytesIO):
 	def __init__(self, dropbox, path, mode):
 		self.dropbox = dropbox
 		self.path = path
@@ -244,7 +244,7 @@ class DropboxFS(FS):
 				parentDir = dirname(path)
 				# throws ResourceNotFound if the parent dir doesn't exist
 				_ = self.getinfo(parentDir)
-			return DropboxFile(self.dropbox, path, mode)
+			return _DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
 		path = self.validatepath(path)
