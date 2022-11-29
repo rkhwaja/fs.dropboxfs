@@ -184,7 +184,7 @@ class DropboxFS(FS):
 				raise ResourceNotFound(path=path) from e
 			return _infoFromMetadata(metadata)
 
-	def setinfo(self, path, info): # pylint: disable=redefined-outer-name
+	def setinfo(self, path, info):
 		_logger.info(f'setinfo({path}, {info})')
 		# dropbox doesn't support changing any of the metadata values
 		path = self.validatepath(path)
