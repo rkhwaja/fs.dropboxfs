@@ -1,7 +1,7 @@
 from contextlib import closing
 from datetime import datetime
 from io import BytesIO
-from logging import info
+from logging import getLogger
 
 from dropbox import Dropbox
 from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMetadata, WriteMode
@@ -14,6 +14,8 @@ from fs.mode import Mode
 from fs.path import dirname
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
+
+_logger = getLogger(__name__)
 
 def _infoFromMetadata(metadata):
 	rawInfo = {
@@ -88,15 +90,12 @@ class _DropboxFile(BytesIO):
 			with closing(response):
 				if (self._mode.reading or self._mode.appending) and not self._mode.truncate:
 					initialData = response.content
-					info(f'Read initial data: {initialData}')
 		except ApiError:
 			# if the file doesn't exist, we don't need to read it's initial state
 			pass
 		super().__init__(initialData)
-		info(f'Set initial data: {initialData}, mode={self._mode}, app={self._mode.appending}')
 		if self._mode.appending and initialData is not None:
 			# seek to the end
-			info('Seeking to the end')
 			self.seek(len(initialData))
 		self._closed = False
 
@@ -138,7 +137,6 @@ class _DropboxFile(BytesIO):
 		return self._mode.to_platform_bin()
 
 	def close(self):
-		info(f'close: {self.getvalue()}')
 		if not self._mode.writing and not self._mode.appending:
 			self._closed = True
 			return
@@ -146,7 +144,6 @@ class _DropboxFile(BytesIO):
 			writeMode = WriteMode('add')
 		else:
 			writeMode = WriteMode('update', self.rev)
-		info(f'{writeMode=}')
 		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # pylint: disable=unused-variable
 		# Make sure that we can't call this again
 		self.path = None
@@ -176,6 +173,7 @@ class DropboxFS(FS):
 		return 'DropboxFS()'
 
 	def getinfo(self, path, namespaces=None):
+		_logger.info(f'getinfo({path}, {namespaces})')
 		path = self.validatepath(path)
 		if path == '/':
 			return Info({'basic': {'name': '', 'is_dir': True}})
@@ -187,6 +185,7 @@ class DropboxFS(FS):
 			return _infoFromMetadata(metadata)
 
 	def setinfo(self, path, info): # pylint: disable=redefined-outer-name
+		_logger.info(f'setinfo({path}, {info})')
 		# dropbox doesn't support changing any of the metadata values
 		path = self.validatepath(path)
 		with self._lock:
@@ -194,11 +193,13 @@ class DropboxFS(FS):
 				raise ResourceNotFound(path)
 
 	def listdir(self, path):
+		_logger.info(f'listdir({path})')
 		path = self.validatepath(path)
 		with self._lock:
 			return [x.name for x in self.scandir(path)]
 
 	def makedir(self, path, permissions=None, recreate=False):
+		_logger.info(f'makedir({path}, {permissions}, {recreate})')
 		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path):
@@ -223,6 +224,7 @@ class DropboxFS(FS):
 			return SubFS(self, path)
 
 	def openbin(self, path, mode='r', buffering=-1, **options):
+		_logger.info(f'openbin({path}, {mode}, {buffering}, {options})')
 		if 't' in mode:
 			raise ValueError('Text mode is not allowed in openbin')
 		path = self.validatepath(path)
@@ -247,6 +249,7 @@ class DropboxFS(FS):
 			return _DropboxFile(self.dropbox, path, mode)
 
 	def remove(self, path):
+		_logger.info(f'remove({path})')
 		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
@@ -259,6 +262,7 @@ class DropboxFS(FS):
 				raise FileExpected(path=path) from e
 
 	def removedir(self, path):
+		_logger.info(f'removedir({path})')
 		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
@@ -275,6 +279,7 @@ class DropboxFS(FS):
 
 	# non-essential method - for speeding up walk
 	def scandir(self, path, namespaces=None, page=None):
+		_logger.info(f'scandir({path}, {namespaces}, {page})')
 		path = self.validatepath(path)
 		with self._lock:
 			if self.exists(path) is False:
