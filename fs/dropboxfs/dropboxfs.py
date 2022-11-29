@@ -4,11 +4,11 @@ from io import BytesIO
 from logging import getLogger
 
 from dropbox import Dropbox
-from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMetadata, WriteMode
+from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMetadata, ListFolderContinueError, ListFolderError, WriteMode
 from dropbox.exceptions import ApiError
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, ResourceNotFound
+from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import dirname
@@ -202,12 +202,15 @@ class DropboxFS(FS):
 		_logger.info(f'makedir({path}, {permissions}, {recreate})')
 		path = self.validatepath(path)
 		with self._lock:
-			if self.exists(path):
-				if self.isdir(path):
+			try:
+				info_ = self.getinfo(path)
+				if info_.is_dir:
 					if recreate is False:
 						raise DirectoryExists(path=path)
 					return SubFS(self, path)
 				raise DirectoryExists(path)
+			except ResourceNotFound:
+				pass
 
 			# check that the parent directory exists
 			parentDir = dirname(path)
@@ -252,9 +255,9 @@ class DropboxFS(FS):
 		_logger.info(f'remove({path})')
 		path = self.validatepath(path)
 		with self._lock:
-			if self.exists(path) is False:
-				raise ResourceNotFound(path=path)
-			if self.isdir(path) is True:
+			# correctly throws ResourceNotFound if path doesn't exist
+			info_ = self.getinfo(path)
+			if info_.is_dir:
 				raise FileExpected(path=path)
 			try:
 				self.dropbox.files_delete_v2(path)
@@ -265,11 +268,11 @@ class DropboxFS(FS):
 		_logger.info(f'removedir({path})')
 		path = self.validatepath(path)
 		with self._lock:
-			if self.exists(path) is False:
-				raise ResourceNotFound(path=path)
-			if self.isdir(path) is False:
+			# correctly throws ResourceNotFound if path doesn't exist
+			info_ = self.getinfo(path)
+			if info_.is_dir is False:
 				raise DirectoryExpected(path=path)
-			if len(self.listdir(path)) > 0:
+			if next(self.scandir(path), None) is not None:
 				raise DirectoryNotEmpty(path=path)
 			try:
 				self.dropbox.files_delete_v2(path)
@@ -282,18 +285,24 @@ class DropboxFS(FS):
 		_logger.info(f'scandir({path}, {namespaces}, {page})')
 		path = self.validatepath(path)
 		with self._lock:
-			if self.exists(path) is False:
-				raise ResourceNotFound(path=path)
-			if self.isdir(path) is False:
+			# correctly throws ResourceNotFound if path doesn't exist
+			info_ = self.getinfo(path)
+			if info_.is_dir is False:
 				raise DirectoryExpected(path=path)
 
 			# get all the avaliable metadata since it's cheap
 			# TODO - this call has a recursive flag so we can either use that and cache OR override walk
-			result = self.dropbox.files_list_folder(path, include_media_info=True)
-			allEntries = result.entries
-			while result.has_more:
-				result = self.dropbox.files_list_folder_continue(result.cursor)
-				allEntries += result.entries
+			try:
+				result = self.dropbox.files_list_folder(path, include_media_info=True)
+				allEntries = result.entries
+				while result.has_more:
+					result = self.dropbox.files_list_folder_continue(result.cursor)
+					allEntries += result.entries
+					if page is not None and len(allEntries) >= page[1]:
+						continue
+			except ApiError as e:
+				assert isinstance(e.error, (ListFolderError, ListFolderContinueError))
+				raise FSError() from e
 			if page is not None:
 				allEntries = allEntries[page[0]: page[1]]
 			return (_infoFromMetadata(x) for x in allEntries)
