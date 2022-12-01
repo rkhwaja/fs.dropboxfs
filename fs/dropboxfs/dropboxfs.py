@@ -166,7 +166,8 @@ class DropboxFS(FS):
 			'max_sys_path_length': None, # there's no syspath
 			'network': True,
 			'read_only': False,
-			'supports_rename': False # since we don't have a syspath...
+			'supports_rename': False, # since we don't have a syspath...
+			'thread_safe': True
 		}
 
 	def __repr__(self):
