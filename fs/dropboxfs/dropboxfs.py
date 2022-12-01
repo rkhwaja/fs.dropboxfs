@@ -11,7 +11,7 @@ from fs.enums import ResourceType
 from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import dirname
+from fs.path import dirname, join
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
