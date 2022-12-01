@@ -295,11 +295,9 @@ class DropboxFS(FS):
 			try:
 				result = self.dropbox.files_list_folder(path, include_media_info=True)
 				allEntries = result.entries
-				while result.has_more:
+				while result.has_more and (page is None or len(allEntries) < page[1]):
 					result = self.dropbox.files_list_folder_continue(result.cursor)
 					allEntries += result.entries
-					if page is not None and len(allEntries) >= page[1]:
-						continue
 			except ApiError as e:
 				assert isinstance(e.error, (ListFolderError, ListFolderContinueError))
 				raise FSError() from e
