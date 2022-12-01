@@ -180,7 +180,7 @@ class DropboxFS(FS):
 			return Info({'basic': {'name': '', 'is_dir': True}})
 		with self._lock:
 			try:
-				metadata = self.dropbox.files_get_metadata(path, include_media_info=True)
+				metadata = self.dropbox.files_get_metadata(path, include_media_info=(namespaces is not None and 'media_info' in namespaces))
 			except ApiError as e:
 				raise ResourceNotFound(path=path) from e
 			return _infoFromMetadata(metadata)
@@ -294,7 +294,7 @@ class DropboxFS(FS):
 			# get all the avaliable metadata since it's cheap
 			# TODO - this call has a recursive flag so we can either use that and cache OR override walk
 			try:
-				result = self.dropbox.files_list_folder(path, include_media_info=True)
+				result = self.dropbox.files_list_folder(path)
 				allEntries = result.entries
 				while result.has_more and (page is None or len(allEntries) < page[1]):
 					result = self.dropbox.files_list_folder_continue(result.cursor)
@@ -304,4 +304,7 @@ class DropboxFS(FS):
 				raise FSError() from e
 			if page is not None:
 				allEntries = allEntries[page[0]: page[1]]
+			# Dropbox doesn't return media_info items during list since Dec 2, 2019
+			if namespaces is not None and 'media_info' in namespaces:
+				return (self.getinfo(join(path, x['name'])) for x in allEntries)
 			return (_infoFromMetadata(x) for x in allEntries)
