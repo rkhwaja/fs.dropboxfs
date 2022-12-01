@@ -18,7 +18,7 @@ def Run():
 	oauthResult = oauthFlow.finish(code)
 	print(oauthResult)
 	with open(environ['DROPBOX_CREDENTIALS_PATH'], 'w', encoding='utf-8') as f:
-		dump({'access_token': oauthResult.access_token, 'refresh_token': oauthResult.refresh_token}, f)
+		dump({'access_token': oauthResult.access_token, 'refresh_token': oauthResult.refresh_token, 'app_key': environ['DROPBOX_APP_KEY'], 'app_secret': environ['DROPBOX_APP_SECRET']}, f)
 
 if __name__ == '__main__':
 	Run()
