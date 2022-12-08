@@ -45,6 +45,9 @@ class TestDropboxFS(FSTestCases, TestCase):
 			pass
 		info(f'Time for walk {perf_counter() - startTime}')
 
+	def test_upload_large_file(self):
+		self.fs.writebytes('large_file.bin', b'x' * (150 * 1024 * 1024 * 2))
+
 	def test_opener(self):
 		registry.install(DropboxOpener())
 
