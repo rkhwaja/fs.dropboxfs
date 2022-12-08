@@ -5,7 +5,7 @@ from logging import getLogger
 
 from dropbox import Dropbox
 from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMetadata, ListFolderContinueError, ListFolderError, WriteMode
-from dropbox.exceptions import ApiError
+from dropbox.exceptions import ApiError, WriteConflictError, WriteError
 from fs.base import FS
 from fs.enums import ResourceType
 from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, OperationFailed, RemoveRootError, ResourceNotFound
@@ -203,6 +203,8 @@ class DropboxFS(FS):
 		_logger.info(f'makedir({path}, {permissions}, {recreate})')
 		path = self.validatepath(path)
 		with self._lock:
+			# files_create_folder_v2 does the equivalent of makedirs
+			# so we have to do the precheck
 			try:
 				info_ = self.getinfo(path)
 				if info_.is_dir:
@@ -221,11 +223,29 @@ class DropboxFS(FS):
 			try:
 				folderMetadata = self.dropbox.files_create_folder_v2(path) # noqa: F841
 			except ApiError as e:
-				assert isinstance(e.error, CreateFolderError)
-				# TODO - there are other possibilities
-				raise DirectoryExpected(path=path) from e
-			# don't need to close this filesystem so we return the non-closing version
+				assert isinstance(e.error, CreateFolderError), 'unexpected dropbox error thrown'
+				assert e.error.is_path() is True, 'what other reason for error?'
+				writeError = e.error.get_path()
+				assert isinstance(writeError, WriteError)
+				if writeError.is_conflict():
+					writeConflictError = writeError.get_conflict()
+					assert isinstance(writeConflictError, WriteConflictError)
+					if writeError.is_file():
+						# file exists at this path
+						raise DirectoryExists(path=path)
+					elif writeError.is_file_ancestor():
+						raise DirectoryExists(path=path)
+					elif writeError.is_folder():
+						raise DirectoryExists(path=path)
+				_logger.exception('Unknown error')
+				raise FSError() from  e # just throw the native exception
 			return SubFS(self, path)
+			# there isn't enough information in the Dropbox exception to say what went wrong
+			# it can fail for the following reasons:
+			# - directory already exists
+			# - file already exists at this path
+			# - parent directory doesn't exist
+			# - some other problem that the fs tests don't expect e.g. permissions problem
 
 	def openbin(self, path, mode='r', buffering=-1, **options):
 		_logger.info(f'openbin({path}, {mode}, {buffering}, {options})')
