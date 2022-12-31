@@ -66,6 +66,7 @@ enable="useless-suppression"
 indent-string = "\t"
 max-line-length = "200"
 string-quote = "single-avoid-escape"
+triple-quote = "single"
 
 [tool.pylint.messages_control]
 disable = [
