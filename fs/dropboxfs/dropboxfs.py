@@ -322,3 +322,19 @@ class DropboxFS(FS):
 			if namespaces is not None and 'media_info' in namespaces:
 				return (self.getinfo(join(path, x['name'])) for x in allEntries)
 			return (_infoFromMetadata(x) for x in allEntries)
+
+	def copy(self, src_path, dst_path, overwrite=False, preserve_time=False):
+		src_path = self.validatepath(src_path)
+		dst_path = self.validatepath(dst_path)
+		with self._lock:
+			if not overwrite and self.exists(dst_path):
+				raise DestinationExists(dst_path)
+			# try:
+			# 	srcMetadata = self.dropbox.files_get_metadata(src_path)
+			# except ApiError as e:
+			# 	raise ResourceNotFound(path=src_path) from e
+			try:
+				# how to specify overwrite yes or no?
+				result = self.dropbox.files_copy_v2(src_path, dst_path, allow_shared_folder=False, autorename=False, allow_ownership_transfer=True)
+			except ApiError as e:
+				relocationError = e.error
