@@ -22,6 +22,7 @@ classifiers = [
 python = ">=3.8"
 fs = ">=2.0.10"
 dropbox = ">=11.36.0"
+setuptools = "<67" # 67 broke something to do with pyfilesystem openers
 
 [tool.poetry.dev-dependencies]
 pylint = ">=2.15.6"
