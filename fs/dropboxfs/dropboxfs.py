@@ -261,6 +261,7 @@ class DropboxFS(FS):
 			if info_.is_dir:
 				raise FileExpected(path=path)
 			try:
+				# this deletes both files and folders so we need to precheck
 				self.dropbox.files_delete_v2(path)
 			except ApiError as e:
 				raise FileExpected(path=path) from e
@@ -276,6 +277,7 @@ class DropboxFS(FS):
 			if next(self.scandir(path), None) is not None:
 				raise DirectoryNotEmpty(path=path)
 			try:
+				# this deletes both files and folders so we need to precheck
 				self.dropbox.files_delete_v2(path)
 			except ApiError as e:
 				assert isinstance(e.error, DeleteError)
@@ -286,21 +288,27 @@ class DropboxFS(FS):
 		_logger.info(f'scandir({path}, {namespaces}, {page})')
 		path = self.validatepath(path)
 		with self._lock:
-			# correctly throws ResourceNotFound if path doesn't exist
-			info_ = self.getinfo(path)
-			if info_.is_dir is False:
-				raise DirectoryExpected(path=path)
-
 			# get all the avaliable metadata since it's cheap
 			# TODO - this call has a recursive flag so we can either use that and cache OR override walk
 			try:
 				result = self.dropbox.files_list_folder(path)
-				allEntries = result.entries
+			except ApiError as e:
+				assert isinstance(e.error, ListFolderError), 'Unexpected Dropbox error thrown'
+				if e.error.is_path() is False:
+					raise FSError() from e
+				lookupError = e.error.get_path()
+				if lookupError.is_not_found():
+					raise ResourceNotFound(path=path) from e
+				if lookupError.is_not_folder():
+					raise DirectoryExpected(path=path) from e
+			allEntries = result.entries
+
+			try:
 				while result.has_more and (page is None or len(allEntries) < page[1]):
 					result = self.dropbox.files_list_folder_continue(result.cursor)
 					allEntries += result.entries
 			except ApiError as e:
-				assert isinstance(e.error, (ListFolderError, ListFolderContinueError))
+				assert isinstance(e.error, ListFolderContinueError)
 				raise FSError() from e
 			if page is not None:
 				allEntries = allEntries[page[0]: page[1]]
