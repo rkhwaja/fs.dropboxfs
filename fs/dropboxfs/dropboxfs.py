@@ -63,7 +63,7 @@ def _infoFromMetadata(metadata):
 						'dimensions_width': media_info_metadata.dimensions.width
 					}
 				})
-	elif isinstance(metadata, FolderMetadata): # pylint: disable=confusing-consecutive-elif
+	elif isinstance(metadata, FolderMetadata):
 		rawInfo.update({
 		'details': {
 			'accessed': None, # not supported by Dropbox API
@@ -114,12 +114,12 @@ class _DropboxFile(BytesIO):
 
 	def read(self, size=-1):
 		if self._mode.reading is False:
-			raise IOError('This file object is not readable')
+			raise OSError('This file object is not readable')
 		return super().read(size)
 
 	def write(self, data):
 		if self._mode.writing is False:
-			raise IOError('This file object is not writable')
+			raise OSError('This file object is not writable')
 		return super().write(data)
 
 	def readable(self):
@@ -140,11 +140,8 @@ class _DropboxFile(BytesIO):
 		if not self._mode.writing and not self._mode.appending:
 			self._closed = True
 			return
-		if self.rev is None:
-			writeMode = WriteMode('add')
-		else:
-			writeMode = WriteMode('update', self.rev)
-		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # pylint: disable=unused-variable
+		writeMode = WriteMode('add') if self.rev is None else WriteMode('update', self.rev)
+		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # noqa: F841
 		# Make sure that we can't call this again
 		self.path = None
 		self._mode = None
@@ -219,7 +216,7 @@ class DropboxFS(FS):
 				raise ResourceNotFound(path=path)
 
 			try:
-				folderMetadata = self.dropbox.files_create_folder_v2(path) # pylint: disable=unused-variable
+				folderMetadata = self.dropbox.files_create_folder_v2(path) # noqa: F841
 			except ApiError as e:
 				assert isinstance(e.error, CreateFolderError)
 				# TODO - there are other possibilities
@@ -295,7 +292,7 @@ class DropboxFS(FS):
 			except ApiError as e:
 				assert isinstance(e.error, ListFolderError), 'Unexpected Dropbox error thrown'
 				if e.error.is_path() is False:
-					raise FSError() from e
+					raise FSError from e
 				lookupError = e.error.get_path()
 				if lookupError.is_not_found():
 					raise ResourceNotFound(path=path) from e
@@ -309,7 +306,7 @@ class DropboxFS(FS):
 					allEntries += result.entries
 			except ApiError as e:
 				assert isinstance(e.error, ListFolderContinueError)
-				raise FSError() from e
+				raise FSError from e
 			if page is not None:
 				allEntries = allEntries[page[0]: page[1]]
 			# Dropbox doesn't return media_info items during list since Dec 2, 2019
