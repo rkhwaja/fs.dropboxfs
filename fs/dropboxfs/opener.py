@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 __all__ = ['DropboxOpener']
+
+from typing import ClassVar
 
 from fs.opener import Opener
 
 from .dropboxfs import DropboxFS
 
-class DropboxOpener(Opener): # pylint: disable=too-few-public-methods
-	protocols = ['dropbox']
+class DropboxOpener(Opener):
+	protocols: ClassVar[list[str]] = ['dropbox']
 
-	def open_fs(self, fs_url, parse_result, writeable, create, cwd): # pylint: disable=too-many-arguments
+	def open_fs(self, fs_url, parse_result, writeable, create, cwd): # noqa: ARG002
 		_, _, directory = parse_result.resource.partition('/')
 		options = {
 			'access_token': parse_result.params.get('access_token'),

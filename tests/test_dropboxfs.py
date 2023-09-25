@@ -41,7 +41,7 @@ class TestDropboxFS(FSTestCases, TestCase):
 		info(f'Time for makedir/openbin {perf_counter() - startTime}')
 
 		startTime = perf_counter()
-		for path, info_ in self.fs.walk.info(namespaces=['basic', 'details']): # pylint: disable=unused-variable
+		for path, info_ in self.fs.walk.info(namespaces=['basic', 'details']): # noqa: B007
 			pass
 		info(f'Time for walk {perf_counter() - startTime}')
 
