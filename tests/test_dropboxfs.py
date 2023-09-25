@@ -22,7 +22,16 @@ def FullFS():
 	credentials = LoadCredentials()
 	return DropboxFS(refresh_token=credentials.get('refresh_token'), app_key=credentials.get('app_key'), app_secret=credentials.get('app_secret'))
 
-class TestDropboxFS(FSTestCases, TestCase):
+class PyFsCompatLayer:
+    """PyFilesystem2 Python 3.12 compatibility layer.
+
+    Adds a workaround for PyFilesystem2#568:
+    https://github.com/PyFilesystem/pyfilesystem2/issues/568
+    """
+
+    assertRaisesRegexp = TestCase.assertRaisesRegex
+
+class TestDropboxFS(FSTestCases, TestCase, PyFsCompatLayer):
 	def make_fs(self):
 		self.fullFS = FullFS()
 		self.testSubdir = f'/tests/dropboxfs-test-{uuid4()}'
