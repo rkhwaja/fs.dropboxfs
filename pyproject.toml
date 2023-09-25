@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fs.dropboxfs"
-version = "1.0.1"
+version = "1.0.2"
 description = "Pyfilesystem2 implementation for Dropbox"
 authors = ["Rehan Khwaja <rehan@khwaja.name>"]
 license = "MIT"
@@ -15,7 +15,8 @@ classifiers = [
 	"Programming Language :: Python :: 3.8",
 	"Programming Language :: Python :: 3.9",
 	"Programming Language :: Python :: 3.10",
-	"Programming Language :: Python :: 3.11"
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12"
 ]
 
 [tool.poetry.dependencies]
@@ -46,7 +47,7 @@ pytest -n 8 || exit 1
 
 [tool.ruff]
 line-length = 1000
-ignore = ["ANN", "B011", "COM812", "D", "DTZ", "EM", "FBT002", "FIX", "G004", "I", "N802", "N806", "N816", "PLR0913", "PTH", "S101", "T201", "TD", "TRY003", "W191"]
+ignore = ["ANN", "B011", "COM812", "D", "DTZ", "EM", "ERA001", "FBT002", "FIX", "G004", "I", "N802", "N806", "N815", "N816", "PLR0913", "PTH", "S101", "T201", "TD", "TRY003", "W191"]
 select = ["ALL"]
 target-version = "py38"
 
