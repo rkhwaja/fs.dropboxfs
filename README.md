@@ -25,8 +25,8 @@ dropboxFS2 = open_fs('dropbox:///somedirectory?access_token=your_access_token&re
 
 To run the tests, set the following environment variables:
 
-- DROPBOX_APP_KEY - your app key (see Dropbox Developer Console)
-- DROPBOX_APP_SECRET - your app secret (see Dropbox Developer Console)
+- DROPBOX_APP_KEY - your app key (see [Dropbox Developer Console](https://www.dropbox.com/developers/apps))
+- DROPBOX_APP_SECRET - your app secret (see [Dropbox Developer Console](https://www.dropbox.com/developers/apps))
 - DROPBOX_CREDENTIALS_PATH - path to a json file which will contain the credentials
 
 Then generate the credentials json file by running
