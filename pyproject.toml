@@ -1,6 +1,6 @@
 [project]
 name = "fs.dropboxfs"
-version = "1.0.5"
+version = "1.0.6"
 description = "Pyfilesystem2 implementation for Dropbox"
 maintainers = [
 	{ name = "Rehan Khwaja", email = "rehan@khwaja.name" }
@@ -17,6 +17,7 @@ classifiers = [
 	"Programming Language :: Python :: 3.10",
 	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.8"
 dependencies = [
