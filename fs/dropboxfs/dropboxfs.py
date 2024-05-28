@@ -288,7 +288,11 @@ class DropboxFS(FS):
 			# get all the avaliable metadata since it's cheap
 			# TODO - this call has a recursive flag so we can either use that and cache OR override walk
 			try:
-				result = self.dropbox.files_list_folder(path)
+				effective_path = path
+				if path == '/':
+					# Error in call to API function "files/list_folder": request body: path: Specify the root folder as an empty string rather than as "/"
+					effective_path = ''
+				result = self.dropbox.files_list_folder(effective_path)
 			except ApiError as e:
 				assert isinstance(e.error, ListFolderError), 'Unexpected Dropbox error thrown'
 				if e.error.is_path() is False:
