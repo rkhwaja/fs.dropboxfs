@@ -22,6 +22,10 @@ def FullFS():
 	credentials = LoadCredentials()
 	return DropboxFS(refresh_token=credentials.get('refresh_token'), app_key=credentials.get('app_key'), app_secret=credentials.get('app_secret'))
 
+def test_list_root():
+	fs = FullFS()
+	assert fs.listdir('/') == fs.listdir('')
+
 class PyFsCompatLayer:
     """PyFilesystem2 Python 3.12 compatibility layer.
 
