@@ -8,7 +8,7 @@ from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMe
 from dropbox.exceptions import ApiError
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, ResourceNotFound
+from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, RemoveRootError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import dirname, join
@@ -266,6 +266,8 @@ class DropboxFS(FS):
 	def removedir(self, path):
 		_logger.info(f'removedir({path})')
 		path = self.validatepath(path)
+		if path == '/':
+			raise RemoveRootError(path=path)
 		with self._lock:
 			# correctly throws ResourceNotFound if path doesn't exist
 			info_ = self.getinfo(path)
