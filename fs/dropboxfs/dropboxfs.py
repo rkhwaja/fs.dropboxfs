@@ -1,5 +1,5 @@
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, UTC
 from io import BytesIO
 from logging import getLogger
 
@@ -141,7 +141,7 @@ class _DropboxFile(BytesIO):
 			self._closed = True
 			return
 		writeMode = WriteMode('add') if self.rev is None else WriteMode('update', self.rev)
-		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.utcnow(), mute=False) # noqa: F841
+		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.now(UTC).replace(tzinfo=None), mute=False) # noqa: F841
 		# Make sure that we can't call this again
 		self.path = None
 		self._mode = None
