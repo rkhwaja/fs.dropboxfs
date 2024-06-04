@@ -8,7 +8,7 @@ from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMe
 from dropbox.exceptions import ApiError
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, RemoveRootError, ResourceNotFound
+from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, OperationFailed, RemoveRootError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import dirname, join
@@ -141,7 +141,10 @@ class _DropboxFile(BytesIO):
 			self._closed = True
 			return
 		writeMode = WriteMode('add') if self.rev is None else WriteMode('update', self.rev)
-		metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.now(UTC).replace(tzinfo=None), mute=False) # noqa: F841
+		try:
+			metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.now(UTC).replace(tzinfo=None), mute=False) # noqa: F841
+		except ApiError as e:
+			raise OperationFailed(self.path) from e
 		# Make sure that we can't call this again
 		self.path = None
 		self._mode = None
