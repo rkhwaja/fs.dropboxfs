@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fs.dropboxfs"
-version = "1.0.3"
+version = "1.0.4"
 description = "Pyfilesystem2 implementation for Dropbox"
 authors = ["Rehan Khwaja <rehan@khwaja.name>"]
 license = "MIT"
@@ -22,7 +22,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.8"
 fs = ">=2.0.10"
-dropbox = ">=11.36.0"
+dropbox = ">=12.0.2"
 setuptools = "<67" # 67 broke something to do with pyfilesystem openers
 
 [tool.poetry.dev-dependencies]
