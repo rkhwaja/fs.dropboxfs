@@ -1,12 +1,12 @@
-[tool.poetry]
+[project]
 name = "fs.dropboxfs"
 version = "1.0.5"
 description = "Pyfilesystem2 implementation for Dropbox"
-authors = ["Rehan Khwaja <rehan@khwaja.name>"]
-license = "MIT"
+maintainers = [
+	{ name = "Rehan Khwaja", email = "rehan@khwaja.name" }
+]
 readme = "README.md"
 packages = [{include = "fs"}]
-homepage = "https://github.com/rkhwaja/fs.dropboxfs"
 keywords = ["filesystem", "Pyfilesystem2", "dropbox"]
 classifiers = [
 	"License :: OSI Approved :: MIT License",
@@ -16,26 +16,27 @@ classifiers = [
 	"Programming Language :: Python :: 3.9",
 	"Programming Language :: Python :: 3.10",
 	"Programming Language :: Python :: 3.11",
-	"Programming Language :: Python :: 3.12"
+	"Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "dropbox>=12.0.2",
+    "fs>=2.0.10",
+    "setuptools>=70",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.8"
-fs = ">=2.0.10"
-dropbox = ">=12.0.2"
-setuptools = ">=70"
+[project.urls]
+Homepage = "https://github.com/rkhwaja/fs.dropboxfs"
 
-[tool.poetry.dev-dependencies]
-pytest = ">=7.2.0"
-pyperclip = ">=1.8.2"
-poethepoet = ">=0.16.4"
-pytest-xdist = ">=3.2.1"
-ruff = ">=0.4.4"
-
-[tool.poetry.plugins] # Optional super table
-
-[tool.poetry.plugins."fs.opener"]
+[project.entry-points."fs.opener"]
 "dropbox" = "fs.dropboxfs.opener:DropboxOpener"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fs"]
 
 [tool.poe.tasks]
 lint = "ruff check fs/dropboxfs/ tests/"
@@ -58,6 +59,11 @@ target-version = "py38"
 inline-quotes = "single"
 multiline-quotes = "single"
 
-[build-system]
-requires = ["poetry_core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv]
+dev-dependencies = [
+    "poethepoet>=0.16.4",
+    "pyperclip>=1.8.2",
+    "pytest-xdist>=3.2.1",
+    "pytest>=7.2.0",
+    "ruff>=0.4.4",
+]
