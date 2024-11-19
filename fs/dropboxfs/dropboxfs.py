@@ -1,5 +1,5 @@
 from contextlib import closing
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from io import BytesIO
 from logging import getLogger
 
@@ -142,7 +142,7 @@ class _DropboxFile(BytesIO):
 			return
 		writeMode = WriteMode('add') if self.rev is None else WriteMode('update', self.rev)
 		try:
-			metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.now(UTC).replace(tzinfo=None), mute=False) # noqa: F841
+			metadata = self.dropbox.files_upload(self.getvalue(), self.path, mode=writeMode, autorename=False, client_modified=datetime.now(timezone.utc).replace(tzinfo=None), mute=False) # noqa: F841
 		except ApiError as e:
 			raise OperationFailed(self.path) from e
 		# Make sure that we can't call this again
