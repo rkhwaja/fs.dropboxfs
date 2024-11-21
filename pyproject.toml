@@ -1,6 +1,6 @@
 [project]
 name = "fs.dropboxfs"
-version = "1.0.6"
+version = "1.0.7"
 description = "Pyfilesystem2 implementation for Dropbox"
 maintainers = [
 	{ name = "Rehan Khwaja", email = "rehan@khwaja.name" }
