@@ -26,6 +26,10 @@ def test_list_root():
 	fs = FullFS()
 	assert fs.listdir('/') == fs.listdir('')
 
+def test_Import():
+	# quick test that we can import the package
+	pass
+
 class PyFsCompatLayer:
     """PyFilesystem2 Python 3.12 compatibility layer.
 
