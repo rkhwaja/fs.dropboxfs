@@ -1,5 +1,3 @@
-__all__ = ['DropboxFS']
-
 from contextlib import closing
 from datetime import datetime, UTC
 from io import BytesIO
