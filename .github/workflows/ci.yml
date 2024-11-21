@@ -55,4 +55,5 @@ jobs:
       env:
         DROPBOX_CREDENTIALS_FOR_CI: ${{ secrets.DROPBOX_CREDENTIALS_FOR_CI }}
       if: ${{needs.secrets.outputs.valid}} == 'true'
-      run: uv run pytest -k test_Import || exit 1
+      run: |
+        uv run pytest -k test_Import || exit 1
