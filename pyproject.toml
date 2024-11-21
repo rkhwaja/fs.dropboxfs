@@ -47,6 +47,11 @@ shell = """
 pytest -n 8 || exit 1
 """
 
+[tool.poe.tasks.test-quick]
+shell = """
+pytest -k test_Import || exit 1
+"""
+
 [tool.ruff]
 line-length = 1000
 lint.ignore = ["ANN", "B011", "COM812", "D", "DTZ", "EM", "ERA001", "FBT002", "FIX", "G004", "I", "N802", "N806", "N815", "N816", "PLR0913", "PTH", "S101", "T201", "TD", "TRY003", "W191"]
