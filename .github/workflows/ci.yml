@@ -48,6 +48,8 @@ jobs:
       run: uv sync --no-cache
     - name: Linter
       run: uv run poe lint
+    - name: Basic test that the package imports
+      run: pytest -k test_ImportWorks
     - name: Tests
       env:
         DROPBOX_CREDENTIALS_FOR_CI: ${{ secrets.DROPBOX_CREDENTIALS_FOR_CI }}
