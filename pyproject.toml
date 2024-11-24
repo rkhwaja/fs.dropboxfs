@@ -49,7 +49,29 @@ pytest -n 8 || exit 1
 
 [tool.ruff]
 line-length = 1000
-lint.ignore = ["ANN", "B011", "COM812", "D", "DTZ", "EM", "ERA001", "FBT002", "FIX", "G004", "I", "N802", "N806", "N815", "N816", "PLR0913", "PTH", "S101", "T201", "TD", "TRY003", "W191"]
+lint.ignore = [
+	"ANN",     # Requires annotations
+	"B011",    # Disallows `assert False`
+	"COM812",  # Requires trailing comma
+	"D",       # Requires various docstrings
+	"DTZ",     # flake8-datetimetz
+	"EM",      # Some complaints about how exception strings are constructed
+	"ERA001",  # Disallows commented out code, but it's detecting false positives
+	"FBT002",  # Disallows boolean positional arguments
+	"FIX",     # Disallows FIXME-type comments
+	"G004",    # Disallows using f-strings in log strings
+	"I",       # False positive isort complaints
+	"N802",    # Requires snake case function names
+	"N806",    # Complaints about variable names
+	"N815",    # Complaints about variable names
+	"N816",    # Complaints about variable names
+	"PTH",     # Requires use of pathlib
+	"S101",    # Disallows use of assert
+	"T201",    # Disallows use of print
+	"TD",      # Requires a particular formatting of TODO comments
+	"TRY003",  # Disallows long exception messages
+	"W191",    # Disallows tab indentation
+	]
 lint.select = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
