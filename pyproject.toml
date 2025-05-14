@@ -6,10 +6,11 @@ maintainers = [
 	{ name = "Rehan Khwaja", email = "rehan@khwaja.name" }
 ]
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 packages = [{include = "fs"}]
 keywords = ["filesystem", "Pyfilesystem2", "dropbox"]
 classifiers = [
-	"License :: OSI Approved :: MIT License",
 	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: Developers",
 	"Programming Language :: Python :: 3.8",
