@@ -8,7 +8,6 @@ maintainers = [
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-packages = [{include = "fs"}]
 keywords = ["filesystem", "Pyfilesystem2", "dropbox"]
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
@@ -50,7 +49,7 @@ pytest -n 8 || exit 1
 """
 
 [tool.ruff]
-line-length = 1000
+line-length = 320
 lint.ignore = [
 	"ANN",     # Requires annotations
 	"B011",    # Disallows `assert False`
