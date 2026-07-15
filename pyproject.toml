@@ -102,3 +102,8 @@ constraint-dependencies = [
 	"setuptools>=78.1.1", # from audit
     "setuptools<81",
 ]
+
+[tool.pysentry.ignore]
+ids = [
+    "PYSEC-2026-3447", # can't fix pyfilesystem
+    ]
