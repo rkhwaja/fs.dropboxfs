@@ -1,6 +1,6 @@
 # fs.dropboxfs
 
-Implementation of [pyfilesystem2](https://docs.pyfilesystem.org/) file system using Dropbox
+Implementation of [pyfilesystem2](https://github.com/PyFilesystem/pyfilesystem2) file system using Dropbox
 
 ![image](https://github.com/rkhwaja/fs.dropboxfs/workflows/ci/badge.svg) [![PyPI version](https://badge.fury.io/py/fs.dropboxfs.svg)](https://badge.fury.io/py/fs.dropboxfs)
 
