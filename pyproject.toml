@@ -53,6 +53,7 @@ lint.ignore = [
 	"ANN",     # Requires annotations
 	"B011",    # Disallows `assert False`
 	"COM812",  # Requires trailing comma
+	"CPY001",  # requires copyright notices
 	"D",       # Requires various docstrings
 	"DTZ",     # flake8-datetimetz
 	"EM",      # Some complaints about how exception strings are constructed
@@ -93,7 +94,7 @@ dev = [
     "pysentry-rs>=0.3.7",
     "pytest-xdist>=3.2.1",
     "pytest>=9.0.3",
-    "ruff>=0.10.0",
+    "ruff>=0.16.1",
 ]
 
 [tool.uv]
