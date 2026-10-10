@@ -17,6 +17,7 @@ classifiers = [
 	"Programming Language :: Python :: 3.12",
 	"Programming Language :: Python :: 3.13",
 	"Programming Language :: Python :: 3.14",
+	"Programming Language :: Python :: 3.15",
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -53,6 +54,7 @@ lint.ignore = [
 	"ANN",     # Requires annotations
 	"B011",    # Disallows `assert False`
 	"COM812",  # Requires trailing comma
+	"CPY001",  # requires copyright notices
 	"D",       # Requires various docstrings
 	"DTZ",     # flake8-datetimetz
 	"EM",      # Some complaints about how exception strings are constructed
@@ -93,7 +95,7 @@ dev = [
     "pysentry-rs>=0.3.7",
     "pytest-xdist>=3.2.1",
     "pytest>=9.0.3",
-    "ruff>=0.10.0",
+    "ruff>=0.16.1",
 ]
 
 [tool.uv]
