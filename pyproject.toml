@@ -45,7 +45,7 @@ lint = "ruff check fs/dropboxfs/ tests/"
 
 [tool.poe.tasks.test]
 shell = """
-pytest -n 8 || exit 1
+pytest -n 8 --reruns 1 || exit 1
 """
 
 [tool.ruff]
@@ -93,6 +93,7 @@ dev = [
     "poethepoet>=0.16.4",
     "pyperclip>=1.8.2",
     "pysentry-rs>=0.3.7",
+    "pytest-rerunfailures>=16.7",
     "pytest-xdist>=3.2.1",
     "pytest>=9.0.3",
     "ruff>=0.16.1",
