@@ -1,5 +1,6 @@
 from contextlib import closing
 from datetime import datetime, timezone
+from hashlib import algorithms_available
 from io import BytesIO
 from logging import getLogger
 
@@ -8,7 +9,7 @@ from dropbox.files import CreateFolderError, DeleteError, FileMetadata, FolderMe
 from dropbox.exceptions import ApiError
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, OperationFailed, RemoveRootError, ResourceNotFound
+from fs.errors import DirectoryExists, DirectoryExpected, DirectoryNotEmpty, FileExists, FileExpected, FSError, OperationFailed, RemoveRootError, ResourceNotFound, UnsupportedHash
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import dirname, join
@@ -322,3 +323,9 @@ class DropboxFS(FS):
 			if namespaces is not None and 'media_info' in namespaces:
 				return (self.getinfo(join(path, x['name'])) for x in allEntries)
 			return (_infoFromMetadata(x) for x in allEntries)
+
+	# workaround for problem with python 3.15
+	def hash(self, path, name):
+		if name not in algorithms_available:
+			raise UnsupportedHash(f"hash '{name}' is not supported")
+		return super().hash(path, name)
