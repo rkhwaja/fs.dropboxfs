@@ -22,6 +22,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         activate-environment: true
         resolution-strategy: "lowest" # to test the bounds in pyproject.toml
+        enable-cache: false # make sure it's not using the latest cache accidentially
     - name: Dependencies
       run: |
         uv sync --upgrade
