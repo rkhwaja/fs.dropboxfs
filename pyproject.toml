@@ -1,6 +1,6 @@
 [project]
 name = "fs.dropboxfs"
-version = "1.0.9"
+version = "2.0.0"
 description = "Pyfilesystem2 implementation for Dropbox"
 maintainers = [
 	{ name = "Rehan Khwaja", email = "rehan@khwaja.name" }
@@ -22,7 +22,7 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "dropbox>=12.0.2",
-    "fs>=2.0.10",
+    "fitzyracing-fs>=2.4.18",
     "setuptools>=70",
 ]
 
@@ -102,11 +102,9 @@ dev = [
 [tool.uv]
 constraint-dependencies = [
 	"requests>=2.33.0", # from audit
-	"setuptools>=78.1.1", # from audit
-    "setuptools<81",
+	"setuptools>=84.1.0", # from audit
 ]
 
 [tool.pysentry.ignore]
 ids = [
-    "PYSEC-2026-3447", # can't fix pyfilesystem
     ]
