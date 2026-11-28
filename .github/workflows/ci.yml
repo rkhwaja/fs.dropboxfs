@@ -26,11 +26,12 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # 10.4.0
         with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
           activate-environment: true
           ignore-nothing-to-cache: true
       - name: Dependencies
-        run: uv sync --no-cache
+        run: uv sync
       - name: Linter
         run: poe lint
   tests:
@@ -48,11 +49,12 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # 10.4.0
         with:
+          enable-cache: true
           python-version: 3.15
           activate-environment: true
           ignore-nothing-to-cache: true
       - name: Dependencies
-        run: uv sync --no-cache
+        run: uv sync
       - name: Tests
         env:
           DROPBOX_CREDENTIALS_FOR_CI: ${{ secrets.DROPBOX_CREDENTIALS_FOR_CI }}
